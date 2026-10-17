@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en" data-layout="wide" data-side="left">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Gifar · 3D Portfolio</title>
+    <meta name="description" content="Gifar — Frontend Developer & Creative Technologist. Meet the 3D avatar and explore skills, projects, and journey." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%234E61E8'/></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Mochiy+Pop+One&family=Mrs+Saint+Delafield&display=swap" />
+  </head>
+  <body data-view="home">
+    <div class="backdrop" aria-hidden="true">
+      <img class="backdrop__img" src="/images/background-avatar.png" alt="" width="1536" height="1024" decoding="async" fetchpriority="high" />
+      <img class="backdrop__img backdrop__img--blur" src="/images/background-avatar-blur.jpg" alt="" width="1536" height="1024" decoding="async" fetchpriority="low" />
+    </div>
+    <div class="wash wash--home" aria-hidden="true"></div>
+    <div class="wash wash--detail" aria-hidden="true"></div>
+    <canvas id="stage" role="img" aria-label="Gifar’s 3D avatar. Click the avatar to make it wave."></canvas>
+
+    <header class="topbar">
+      <a class="wordmark" href="#/" aria-label="GIFAR, home"></a>
+      <nav class="mainnav" aria-label="Main"><ul id="mainnav-list"></ul><span class="nav-indicator" aria-hidden="true"></span></nav>
+      <div class="topbar__actions">
+        <button class="icon-btn glass-1" id="btn-sound" type="button" aria-pressed="false" aria-label="Mute narration"></button>
+        <button class="greet glass-1" id="btn-greet" type="button"><span id="greet-label"></span><span class="greet__dot" aria-hidden="true"><span></span></span></button>
+        <button class="icon-btn glass-1 menu-btn" id="btn-menu" type="button" aria-expanded="false" aria-controls="menu-sheet" aria-label="Open menu"></button>
+      </div>
+    </header>
+    <div class="menu-sheet glass-3" id="menu-sheet" hidden>
+      <nav aria-label="Main menu"><ul id="menu-list"></ul></nav>
+    </div>
+
+    <main>
+      <section class="view view--home" id="view-home" aria-labelledby="hero-title" inert>
+        <h1 class="sr-only" id="hero-title"></h1>
+        <p class="nameplate glass-1" id="nameplate"></p>
+        <ul class="topic-cards" id="topic-cards" aria-label="Topics"></ul>
+        <footer class="home-footer">
+          <div class="connect">
+            <span class="connect__label">Let’s connect</span>
+            <span class="connect__divider" aria-hidden="true"></span>
+            <ul class="connect__links" id="connect-links"></ul>
+          </div>
+        </footer>
+      </section>
+
+      <section class="view view--detail" id="view-detail" aria-labelledby="topic-title" inert>
+        <div class="detail-sheet" id="detail-sheet">
+          <div class="detail-sheet__body">
+          <article class="topic" id="topic" aria-live="polite"></article>
+          <section class="sr-only" aria-label="Transcript"><div id="transcript-text"></div></section>
+          </div>
+        </div>
+
+        <p class="subtitle" id="subtitle" aria-hidden="true"></p>
+
+        <div class="player glass-2" role="group" aria-label="Narration">
+          <button class="player__play" id="btn-play" type="button" aria-label="Play narration">
+            <svg class="player__ring" width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle class="player__track" cx="22" cy="22" r="20" /><circle class="player__progress" id="player-progress" cx="22" cy="22" r="20" transform="rotate(-90 22 22)" /></svg>
+            <span class="player__icon" id="player-icon"></span>
+          </button>
+          <span class="player__time js-time tnum">0:00 / 0:00</span>
+          <button class="player__cc" id="player-cc" type="button" aria-pressed="true" aria-label="Subtitles"></button>
+        </div>
+      </section>
+    </main>
+
+    <nav class="trail" aria-label="Topic trail">
+      <ol class="trail__list" id="trail-list"></ol>
+      <span class="trail__marker" aria-hidden="true"></span>
+      <span class="trail__hint" aria-hidden="true"></span>
+    </nav>
+
+    <div id="loader" class="loader" role="status" aria-live="polite">
+      <div class="loader__mark" aria-hidden="true"></div>
+      <div class="loader__bar"><span id="loader-fill"></span></div>
+      <p id="loader-text">Memuat avatar… 0%</p>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,2 @@
+# Blender writes a .blend1 backup next to every saved .blend
+*.blend1

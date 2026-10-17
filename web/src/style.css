@@ -1,0 +1,734 @@
+/* GIFAR — tokens and components from web/DESIGN.md */
+
+:root {
+  /* color */
+  --color-bg: #F2F4F9;
+  --color-bg-deep: #E9EDF7;
+  --color-surface-solid: #F7F8FC;
+  --ink-900: #19283C;
+  --ink-800: #0C2B6B;
+  --ink-700: #223C6F;
+  --ink-600: #586A8A;
+  --ink-500: #5F6E8C;
+  --ink-300: #899DBD;
+  --accent-600: #3D52D9;
+  --accent-500: #4E61E8;
+  --icon-blue: #2152EA;
+  --violet-500: #696FF9;
+  --violet-600: #5859F5;
+  --accent-50: #EDF1FE;
+  --accent-100: #E9EDFC;
+  --accent-200: #D6DDFD;
+  --line: #DEE2EC;
+  --gradient-media: linear-gradient(135deg, #7380F4 0%, #5859F5 100%);
+
+  --color-text-display: var(--ink-900);
+  --color-text-heading: var(--ink-800);
+  --color-text-title: var(--ink-700);
+  --color-text-secondary: var(--ink-600);
+  --color-text-muted: var(--ink-500);
+  --color-accent: var(--accent-500);
+  --color-accent-text: var(--accent-600);
+
+  /* type */
+  --font-display: 'Mochiy Pop One', 'M PLUS Rounded 1c', system-ui, sans-serif;
+  --font-sans: 'M PLUS Rounded 1c', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-script: 'Mrs Saint Delafield', cursive;
+
+  /* shape & motion */
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);   /* = GSAP 'ui-out' (motion.js) */
+  --dur-fast: 150ms;
+  --dur-base: 240ms;
+  --dur-slow: 450ms;
+
+  /* glass tiers */
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-1: 0 8px 24px -12px rgba(54, 72, 160, 0.18);
+  --shadow-2: 0 14px 36px -16px rgba(54, 72, 160, 0.22), 0 2px 6px rgba(54, 72, 160, 0.05);
+  --shadow-3: 0 24px 48px -20px rgba(54, 72, 160, 0.25);
+  --shadow-hover: 0 24px 48px -20px rgba(54, 72, 160, 0.28), 0 2px 6px rgba(54, 72, 160, 0.06);
+
+  /* layout (set by stage.js) */
+  --k: 1;
+  --ks: 1;
+  --fx: 0px;
+  --fy: 0px;
+
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-text-display);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; }
+a { color: var(--color-accent-text); }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+.tnum { font-variant-numeric: tabular-nums; }
+.accent { color: var(--color-accent); }
+
+:focus-visible {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 2px;
+}
+
+/* ---------- glass ---------- */
+.glass-1, .glass-2, .glass-3 {
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(140%);
+  backdrop-filter: blur(var(--blur)) saturate(140%);
+}
+.glass-1 { --blur: 16px; background: rgba(255, 255, 255, 0.55); border: 1px solid rgba(255, 255, 255, 0.7); box-shadow: var(--shadow-1), var(--glass-highlight); }
+.glass-2 { --blur: 20px; background: rgba(255, 255, 255, 0.66); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: var(--shadow-2), var(--glass-highlight); }
+.glass-3 { --blur: 24px; background: rgba(255, 255, 255, 0.78); border: 1px solid rgba(255, 255, 255, 0.9); box-shadow: var(--shadow-3), var(--glass-highlight); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-1, .glass-2, .glass-3 { background: rgba(247, 248, 252, 0.94); }
+}
+
+/* ---------- scroll areas: thin violet thumb, no track ---------- */
+.topic {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(105, 111, 249, 0.35) transparent;
+}
+.topic::-webkit-scrollbar { width: 10px; }
+.topic::-webkit-scrollbar-track { background: transparent; }
+.topic::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--radius-pill);
+  background: rgba(105, 111, 249, 0.35) padding-box;
+}
+.topic::-webkit-scrollbar-thumb:hover { background-color: rgba(88, 89, 245, 0.6); }
+@media (prefers-reduced-transparency: reduce) {
+  .glass-1, .glass-2, .glass-3 { background: rgba(247, 248, 252, 0.94); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ---------- stage ---------- */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  background: linear-gradient(160deg, var(--color-bg), var(--color-bg-deep));
+}
+.backdrop__img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1536px;
+  height: 1024px;
+  max-width: none;
+  transform-origin: 0 0;
+}
+/* half body: a pre-blurred copy fades in over the sharp one; animating `filter` would re-blur
+   the whole image every frame, right during the camera move */
+.backdrop__img--blur { opacity: 0; transition: opacity 1.6s var(--ease); }
+body[data-view="detail"] .backdrop__img--blur { opacity: 1; }
+/* compact: the image follows the avatar and may not reach the screen edges; fade it into the gradient */
+html[data-layout="compact"] .backdrop__img {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent), linear-gradient(180deg, transparent, #000 10%, #000 88%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent), linear-gradient(180deg, transparent, #000 10%, #000 88%, transparent);
+  mask-composite: intersect;
+}
+
+.wash {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s var(--ease);
+}
+/* soft edge vignette: keeps the background's decorative cards from reading as real ones */
+.wash--home {
+  background: linear-gradient(90deg,
+    rgba(242, 244, 249, 0.95) 0%, rgba(242, 244, 249, 0.9) calc(var(--fx) + 240px * var(--k)), rgba(242, 244, 249, 0) calc(var(--fx) + 420px * var(--k)),
+    rgba(242, 244, 249, 0) calc(100% - var(--fx) - 420px * var(--k)), rgba(242, 244, 249, 0.9) calc(100% - var(--fx) - 240px * var(--k)), rgba(242, 244, 249, 0.95) 100%);
+}
+.wash--detail {
+  background: linear-gradient(90deg, rgba(242, 244, 249, 0.75) 0%, rgba(242, 244, 249, 0) 26%, rgba(242, 244, 249, 0) 44%, rgba(242, 244, 249, 0.8) 60%, rgba(242, 244, 249, 0.9) 100%);
+}
+body[data-view="home"] .wash--home,
+body[data-view="detail"] .wash--detail { opacity: 1; }
+
+#stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 1;
+}
+
+/* everything over the canvas lets clicks through except real controls */
+.topbar, .view, .view * { pointer-events: none; }
+.topbar a, .topbar button, .view a, .view button, .view .detail-sheet__body,
+.view .topic, .view .topic *, .view .player { pointer-events: auto; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 72px;
+  z-index: 20;
+  padding: 0 calc(var(--fx) + 48px * var(--k));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 21px;
+  letter-spacing: 0.12em;
+  color: var(--ink-900);
+  text-decoration: none;
+}
+.wordmark__lambda { width: 0.72em; height: 0.77em; margin-right: 0.12em; }
+
+.mainnav { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); }
+.mainnav ul { display: flex; gap: 32px; }
+.nav-link {
+  position: relative;
+  display: block;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease);
+}
+.nav-link:hover { color: var(--color-text-title); }
+.nav-link[aria-current] { color: var(--color-text-title); font-weight: 700; }
+/* one underline that slides to the current link (motion.js placeMarkers) */
+.nav-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 32px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
+.topbar__actions { display: flex; align-items: center; gap: 16px; }
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  display: grid;
+  place-items: center;
+  color: var(--color-text-title);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform var(--dur-fast) var(--ease);
+}
+.icon-btn:active { transform: scale(0.96); }
+.greet {
+  height: 44px;
+  padding: 0 8px 0 20px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-title);
+  cursor: pointer;
+}
+.greet__dot { width: 28px; height: 28px; border-radius: var(--radius-pill); background: #fff; display: grid; place-items: center; }
+.greet__dot span { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--color-accent); transition: opacity 0.2s var(--ease); }
+.greet[aria-disabled="true"] { cursor: default; }
+.greet[aria-disabled="true"] .greet__dot span { opacity: 0.35; }
+.menu-btn { display: none; }
+
+.menu-sheet {
+  position: fixed;
+  top: 68px;
+  right: 16px;
+  z-index: 30;
+  width: min(240px, calc(100vw - 32px));
+  padding: 8px;
+  border-radius: var(--radius-lg);
+}
+.menu-sheet .nav-link { padding: 12px 14px; border-radius: var(--radius-md); font-size: 15px; }
+.menu-sheet .nav-link[aria-current] { background: var(--accent-50); }
+
+/* ---------- views ---------- */
+/* shown and hidden instantly; the motion in and out is GSAP's (src/motion.js) */
+.view {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  opacity: 0;
+  visibility: hidden;
+}
+.view.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* name plate in front of the podium */
+.nameplate {
+  position: fixed;
+  left: 50%;
+  translate: -50% var(--rise, 0px);   /* --rise: GSAP's entrance (motion.js) */
+  margin: 0;
+  height: calc(38px * var(--ks));
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+.nameplate__name { font-family: var(--font-display); font-size: calc(15px * var(--ks)); color: var(--color-text-display); }
+.nameplate__dot { width: 4px; height: 4px; border-radius: var(--radius-pill); background: var(--color-accent); }
+.nameplate__role { font-size: calc(13px * var(--ks)); font-weight: 500; color: var(--color-text-secondary); }
+
+.signature { margin: 18px 0 0; font-family: var(--font-script); font-size: 54px; line-height: 1; color: var(--color-text-title); }
+
+/* topic cards */
+/* registered so the hover lift can transition on its own: transform itself must not transition,
+   or every GSAP / parallax frame would be smoothed (and lag) by 150 ms */
+@property --lift { syntax: '<length>'; inherits: false; initial-value: 0px; }
+/* GSAP's entrance (--slide/--rise/--grow) and the cursor parallax (--px/--py), set on each
+   element itself; not inherited, so updating one never restyles the card's children */
+@property --slide { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --rise { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --grow { syntax: '<number>'; inherits: false; initial-value: 1; }
+@property --px { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --py { syntax: '<number>'; inherits: false; initial-value: 0; }
+.topic-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(20px * var(--k));
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  /* --slide/--rise/--grow: GSAP's entrance (motion.js); --px/--py: cursor parallax (-1…1), scaled
+     by the card's --depth (px); --lift: the hover. GSAP never writes transform here, because it
+     would bake the card-float `translate` into it */
+  --depth: 5;
+  transform:
+    translate(calc(var(--slide, 0px) + var(--px, 0) * var(--depth) * 1px),
+              calc(var(--rise, 0px) + var(--lift) + var(--py, 0) * var(--depth) * 1px))
+    scale(var(--grow, 1));
+  transition: --lift var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+/* nearer cards drift further, so the four read as layers around the avatar */
+.topic-card[data-topic="about"] { --depth: 6; }
+.topic-card[data-topic="skills"] { --depth: 4; }
+.topic-card[data-topic="projects"] { --depth: 8; }
+.topic-card[data-topic="journey"] { --depth: 5; }
+@media (hover: hover) and (pointer: fine) {
+  .topic-card:hover { --lift: -2px; box-shadow: var(--shadow-hover), var(--glass-highlight); }
+  .topic-card:active { --lift: 0px; }
+}
+.icon-chip {
+  width: calc(40px * var(--ks));
+  height: calc(40px * var(--ks));
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--accent-100);
+  color: var(--icon-blue);
+  display: grid;
+  place-items: center;
+}
+.topic-card__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-right: 28px; }
+.topic-card__title { font-size: calc(15px * var(--ks)); font-weight: 700; color: var(--color-text-title); }
+.topic-card__sub { font-size: calc(12px * var(--ks)); font-weight: 500; color: var(--color-text-muted); }
+.topic-card__arrow { position: absolute; right: calc(20px * var(--k)); bottom: calc(22px * var(--k)); color: var(--color-text-title); display: grid; }
+
+/* footer */
+.connect { display: flex; align-items: center; gap: 16px; }
+.connect__label { font-size: 12px; font-weight: 500; color: var(--color-text-muted); }
+.connect__divider { width: 1px; height: 20px; background: var(--line); }
+.connect__links { display: flex; gap: 16px; }
+.mono-logo { width: 20px; height: 20px; border-radius: 4px; background: var(--ink-700); color: #fff; font-size: 12px; font-weight: 800; display: grid; place-items: center; }
+
+/* topic trail: one dot per stop of the scroll order (home, then each topic), bottom left on every
+   page; a single marker slides to the current stop (motion.js placeMarkers) */
+.trail {
+  position: fixed;
+  z-index: 12;
+  left: calc(var(--fx) + 40px * var(--k));
+  bottom: 30px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+.trail__list { position: relative; display: flex; margin: 0; padding: 0; list-style: none; }
+.trail__list::before { content: ''; position: absolute; left: 16px; right: 16px; top: 21px; height: 2px; border-radius: 2px; background: var(--accent-200); }
+.trail__dot { position: relative; width: 32px; height: 44px; display: grid; place-items: center; }
+.trail__dot::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--ink-300);
+  background: var(--color-surface-solid);
+  transition: border-color var(--dur-fast) var(--ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .trail__dot:hover::after { border-color: var(--color-accent-text); }
+}
+.trail__marker {
+  position: absolute;
+  left: 0;
+  top: 16px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-text);
+  box-shadow: 0 0 0 4px var(--accent-100);
+  pointer-events: none;
+}
+.trail__hint { margin-left: 8px; display: grid; color: var(--ink-300); }
+
+/* detail: topic content */
+.overline { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--color-accent-text); }
+.topic__title {
+  margin: 10px 0 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: calc(38px * var(--ks));
+  line-height: 1.18;
+  color: var(--color-text-heading);
+}
+.topic__title:focus { outline: none; }
+.topic__lead { margin: 14px 0 0; font-size: calc(15px * var(--ks)); line-height: 1.65; color: var(--color-text-muted); }
+
+.stack { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.stack__group { padding: 10px 12px 12px; border-radius: var(--radius-md); }
+.stack__name { margin: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--color-text-title); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-title);
+  box-shadow: none;
+}
+.chip img { width: 16px; height: 16px; }
+.chip--missing { border: 1px dashed var(--ink-300); background: rgba(255, 255, 255, 0.75); }
+.chip__icon { display: grid; color: var(--icon-blue); }
+
+.facts, .rows { margin: 20px 0 0; display: flex; flex-direction: column; gap: 12px; }
+.facts__row { padding: 14px 16px; border-radius: var(--radius-md); display: flex; justify-content: space-between; gap: 16px; }
+.facts dt { font-size: 12px; font-weight: 700; color: var(--color-text-title); }
+.facts dd { margin: 0; font-size: 13px; color: var(--color-text-muted); text-align: right; }
+.row { padding: 14px 16px; border-radius: var(--radius-md); display: flex; align-items: center; gap: 14px; text-decoration: none; }
+a.row { justify-content: space-between; transition: transform var(--dur-fast) var(--ease); }
+@media (hover: hover) and (pointer: fine) {
+  a.row:hover { transform: translateY(-1px); }
+}
+.row__text { display: flex; flex-direction: column; gap: 4px; }
+.row__title { font-size: 14px; font-weight: 700; color: var(--color-text-title); }
+.row__meta { font-size: 12px; color: var(--color-text-muted); }
+.row__arrow { display: grid; color: var(--color-text-title); }
+.timeline__num { width: 28px; height: 28px; flex: none; border-radius: var(--radius-pill); background: var(--accent-200); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--color-text-title); }
+
+/* detail: narration as film subtitles — one cue, at most two lines, words lighting up as
+   they are spoken (subtitle.js). Hidden from screen readers: the transcript is in the page. */
+.subtitle {
+  position: fixed;
+  z-index: 11;
+  left: 0;
+  right: 0;
+  bottom: 40px;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 16px;
+  text-align: center;
+  font-size: 22px;
+  line-height: 1.75;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  visibility: hidden;
+}
+.subtitle.is-off { display: none; }
+.subtitle__line {
+  padding: 3px 14px;
+  border-radius: 8px;
+  background: rgba(25, 40, 60, 0.82);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  color: rgba(255, 255, 255, 0.7);
+}
+.subtitle .w { transition: color 100ms ease; }
+.subtitle .w.is-spoken { color: #fff; }
+
+/* detail: player, bottom right — progress is the ring around play; the header has the sound toggle */
+.player {
+  height: 52px;
+  padding: 0 6px 0 4px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.player__play {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.player__ring { position: absolute; left: 0; top: 0; }
+.player__track { fill: none; stroke: var(--accent-200); stroke-width: 3; }
+.player__progress { fill: none; stroke: var(--violet-600); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 125.66; stroke-dashoffset: 125.66; }
+.player__icon { position: relative; width: 32px; height: 32px; border-radius: var(--radius-pill); background: var(--accent-500); color: #fff; display: grid; place-items: center; }
+.player__time { font-size: 12px; font-weight: 500; color: var(--color-text-muted); white-space: nowrap; }
+.player__cc { width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: var(--radius-pill); background: transparent; display: grid; place-items: center; cursor: pointer; }
+.player__cc span {
+  height: 22px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1.5px solid var(--color-accent-text);
+  color: var(--color-accent-text);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.player__cc[aria-pressed="true"] span { background: var(--color-accent-text); color: #fff; }
+
+/* =====================================================================
+   WIDE — the reference composition, positioned on the scaled 1440×720 frame
+   ===================================================================== */
+html[data-layout="wide"] .nameplate { top: calc(var(--fy) + 660px * var(--k)); }
+/* the avatar stands at the centre; two cards on each side, staggered */
+html[data-layout="wide"] .topic-card { position: fixed; width: calc(264px * var(--k)); min-height: calc(132px * var(--k)); }
+html[data-layout="wide"] .topic-card[data-topic="about"] { left: calc(var(--fx) + 306px * var(--k)); top: calc(var(--fy) + 150px * var(--k)); }
+html[data-layout="wide"] .topic-card[data-topic="projects"] { left: calc(var(--fx) + 266px * var(--k)); top: calc(var(--fy) + 392px * var(--k)); }
+html[data-layout="wide"] .topic-card[data-topic="skills"] { left: calc(var(--fx) + 870px * var(--k)); top: calc(var(--fy) + 166px * var(--k)); }
+html[data-layout="wide"] .topic-card[data-topic="journey"] { left: calc(var(--fx) + 910px * var(--k)); top: calc(var(--fy) + 406px * var(--k)); }
+
+/* one gentle float for the cards, offset per card; only without a fine pointer (no cursor
+   parallax there to keep them alive), and never with reduced motion */
+@keyframes card-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+@media not all and (hover: hover) and (pointer: fine) {
+  html[data-layout="wide"] .view--home.is-active .topic-card { animation: card-float 6s ease-in-out infinite; }
+  html[data-layout="wide"] .topic-card[data-topic="projects"] { animation-delay: -1.5s; }
+  html[data-layout="wide"] .topic-card[data-topic="skills"] { animation-delay: -3s; }
+  html[data-layout="wide"] .topic-card[data-topic="journey"] { animation-delay: -4.5s; }
+}
+
+html[data-layout="wide"] .connect { position: fixed; right: calc(var(--fx) + 48px * var(--k)); bottom: 32px; }
+
+html[data-layout="wide"] .detail-sheet,
+html[data-layout="wide"] .detail-sheet__body { display: contents; }
+html[data-layout="wide"] .topic {
+  position: fixed;
+  left: calc(var(--fx) + 785px * var(--k));
+  top: calc(var(--fy) + 116px * var(--k));
+  width: calc(364px * var(--k) + 12px);
+  max-height: calc(100vh - var(--fy) - 116px * var(--k) - 140px);   /* ends above the subtitles */
+  overflow-y: auto;
+  padding: 0 12px 24px 0;               /* room for the scrollbar and the cards' shadows */
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 28px), transparent);
+}
+html[data-layout="wide"] .player { position: fixed; right: calc(var(--fx) + 40px * var(--k)); bottom: 26px; }
+
+/* mirrored detail (Skills, Journey): content · AVATAR — the avatar stands at HALF_X.right (stage.js) */
+html[data-layout="wide"][data-side="right"] .topic { left: calc(var(--fx) + 280px * var(--k)); }
+html[data-side="right"] .wash--detail {
+  background: linear-gradient(90deg, rgba(242, 244, 249, 0.85) 0%, rgba(242, 244, 249, 0.8) 40%, rgba(242, 244, 249, 0) 50%, rgba(242, 244, 249, 0) 72%, rgba(242, 244, 249, 0.8) 80%, rgba(242, 244, 249, 0.9) 100%);
+}
+
+/* =====================================================================
+   COMPACT — phones, tablets, tall windows
+   ===================================================================== */
+html[data-layout="compact"] .topbar { height: 64px; padding: 0 16px 0 20px; }
+html[data-layout="compact"] .wordmark { font-size: 17px; }
+html[data-layout="compact"] .mainnav,
+html[data-layout="compact"] .greet { display: none; }
+html[data-layout="compact"] .menu-btn { display: grid; }
+html[data-layout="compact"] .topbar__actions { gap: 8px; }
+html[data-layout="compact"] .icon-btn { width: 44px; height: 44px; }
+html[data-layout="compact"] .wash--home { background: linear-gradient(180deg, rgba(242, 244, 249, 0.7) 0%, rgba(242, 244, 249, 0) 14%, rgba(242, 244, 249, 0) 68%, rgba(242, 244, 249, 0.9) 80%); }
+html[data-layout="compact"] .wash--detail { display: none; }
+
+html[data-layout="compact"] .nameplate { bottom: calc(228px + env(safe-area-inset-bottom)); height: 34px; padding: 0 14px; gap: 8px; }
+html[data-layout="compact"] .nameplate__name { font-size: 14px; }
+html[data-layout="compact"] .nameplate__role { font-size: 12px; }
+html[data-layout="compact"] .nameplate__more,
+html[data-layout="compact"] .connect__divider { display: none; }
+
+html[data-layout="compact"] .topic-cards {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+html[data-layout="compact"] .topic-card { position: relative; height: 64px; padding: 0 12px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; border-radius: 14px; }
+html[data-layout="compact"] .icon-chip { width: 36px; height: 36px; }
+html[data-layout="compact"] .topic-card__text { padding-right: 0; }
+html[data-layout="compact"] .topic-card__title { font-size: 13px; line-height: 1.25; }
+html[data-layout="compact"] .topic-card__sub,
+html[data-layout="compact"] .topic-card__arrow { display: none; }
+
+html[data-layout="compact"] .connect { position: fixed; left: 0; right: 0; bottom: calc(22px + env(safe-area-inset-bottom)); justify-content: center; gap: 12px; }
+html[data-layout="compact"] .connect__links { gap: 12px; }
+
+/* the trail only on topics: on home the cards are the menu, and touch has no wheel to step with */
+html[data-layout="compact"] .trail {
+  left: 12px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-1);
+}
+html[data-layout="compact"] body:not([data-view="detail"]) .trail { display: none; }
+html[data-layout="compact"] .trail__dot { width: 28px; }
+html[data-layout="compact"] .trail__list::before { left: 14px; right: 14px; }
+html[data-layout="compact"] .trail__hint { display: none; }
+
+/* Bottom sheet: it rests at 51vh and scrolls up over the avatar (stopping under the header).
+   The scroller itself ignores pointers, so the avatar above the sheet stays tappable;
+   the sheet is frosted glass, so the avatar still shows through when covered. */
+html[data-layout="compact"] .detail-sheet {
+  --sheet-top: 64px;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--sheet-top);
+  bottom: 0;
+  padding-top: calc(51vh - var(--sheet-top));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  pointer-events: none;                 /* no mask/filter here: it would stop the sheet's backdrop blur */
+}
+html[data-layout="compact"] .detail-sheet::-webkit-scrollbar { display: none; }
+html[data-layout="compact"] .detail-sheet__body {
+  pointer-events: auto;
+  max-width: 720px;
+  min-height: 49vh;
+  margin: 0 auto;
+  padding: 22px 20px calc(180px + env(safe-area-inset-bottom));   /* the last lines clear the subtitle and the bottom row */
+  border-radius: 24px 24px 0 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.7) 240px);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  border-top: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 -18px 40px -24px rgba(54, 72, 160, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+html[data-layout="compact"] .detail-sheet__body::before { content: ''; display: block; width: 36px; height: 4px; margin: -8px auto 14px; border-radius: 4px; background: rgba(137, 157, 189, 0.45); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html[data-layout="compact"] .detail-sheet__body { background: rgba(247, 248, 252, 0.94); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  html[data-layout="compact"] .detail-sheet__body { background: rgba(247, 248, 252, 0.94); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+html[data-layout="compact"] .topic__title { font-size: 26px; line-height: 1.22; margin-top: 8px; }
+html[data-layout="compact"] .topic__lead { font-size: 14px; }
+/* the sheet scrolls under the subtitle and the bottom row: it fades out before it gets there */
+html[data-layout="compact"] .view--detail::after {
+  content: '';
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(176px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(242, 244, 249, 0), rgba(242, 244, 249, 0.94) 45%);
+  pointer-events: none;
+}
+html[data-layout="compact"] .subtitle { bottom: calc(88px + env(safe-area-inset-bottom)); max-width: none; font-size: 16px; line-height: 1.8; }
+html[data-layout="compact"] .subtitle__line { padding: 3px 12px; }
+html[data-layout="compact"] .player {
+  position: fixed;
+  z-index: 2;                           /* over the sheet's fade */
+  right: 12px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  padding: 0 4px;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.92);
+}
+html[data-layout="compact"] .player__time { display: none; }
+html[data-layout="compact"] .player__cc { width: 44px; height: 44px; }
+
+/* ---------- loader ---------- */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  transition: opacity 0.6s var(--ease), visibility 0s linear 0.6s;
+}
+.loader.is-done { opacity: 0; visibility: hidden; pointer-events: none; }
+.loader__mark { width: 14px; height: 14px; border-radius: var(--radius-pill); background: var(--color-accent); box-shadow: 0 0 0 8px var(--accent-100); }
+.loader__bar { width: 200px; height: 4px; border-radius: 4px; background: var(--accent-100); overflow: hidden; }
+.loader__bar span { display: block; height: 100%; background: var(--gradient-media); transform: scaleX(0); transform-origin: 0 50%; transition: transform 0.2s linear; }
+.loader p { margin: 0; }
+
+/* press feedback: the `scale` property, so it never fights GSAP's transform on the same element */
+.player__play, .player__cc, .greet { transition-property: scale, background, color; transition-duration: 160ms; transition-timing-function: var(--ease); }
+.player__play:active, .player__cc:active, .greet:active { scale: 0.97; }
+
+/* reduced motion is gentler, not none: fades and colour changes stay, movement goes */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; }
+  .topic-card, a.row, .icon-btn, .player__play, .player__cc, .greet { transform: none !important; scale: none !important; }
+}
