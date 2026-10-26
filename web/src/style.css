@@ -8,8 +8,9 @@
   --ink-900: #19283C;
   --ink-800: #0C2B6B;
   --ink-700: #223C6F;
-  --ink-600: #586A8A;
-  --ink-500: #5F6E8C;
+  /* the secondary and muted text: dark enough that small text reads crisp, not greyed out */
+  --ink-600: #3F4E6B;
+  --ink-500: #46556F;
   --ink-300: #899DBD;
   --accent-600: #3D52D9;
   --accent-500: #4E61E8;
@@ -31,8 +32,13 @@
   --color-accent-text: var(--accent-600);
 
   /* type */
+  /* Display type keeps the rounded, friendly faces; running text (menus, panels, captions) uses the
+     system's UI font (Segoe UI, SF), which is drawn to the pixel grid and stays sharp at 11–15px,
+     where M PLUS Rounded's soft, thin strokes read blurred on Windows. The film subtitles, large and
+     bold, keep M PLUS Rounded (--font-rounded). */
   --font-display: 'Mochiy Pop One', 'M PLUS Rounded 1c', system-ui, sans-serif;
-  --font-sans: 'M PLUS Rounded 1c', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-rounded: 'M PLUS Rounded 1c', var(--font-sans);
   --font-script: 'Mrs Saint Delafield', cursive;
 
   /* shape & motion */
@@ -162,8 +168,9 @@ html[data-layout="compact"] .backdrop__img {
 .wash--detail {
   background: linear-gradient(90deg, rgba(242, 244, 249, 0.75) 0%, rgba(242, 244, 249, 0) 26%, rgba(242, 244, 249, 0) 44%, rgba(242, 244, 249, 0.8) 60%, rgba(242, 244, 249, 0.9) 100%);
 }
-body[data-view="home"] .wash--home,
-body[data-view="detail"] .wash--detail { opacity: 1; }
+body[data-view="home"] .wash--home { opacity: 1; }
+/* the detail wash comes and goes with the content panels (motion.js), not with the view switch */
+.wash--detail { transition: none; visibility: hidden; }
 
 #stage {
   position: fixed;
@@ -172,6 +179,34 @@ body[data-view="detail"] .wash--detail { opacity: 1; }
   height: 100%;
   display: block;
   z-index: 1;
+}
+/* the 3D set: over the 2D backdrop, under the washes (DOM order) and the avatar. Hidden until
+   the first set is up (behind the loader); sets then crossfade inside the canvas (sets.js) */
+#set {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+body.has-set #set { visibility: visible; }
+body.has-set .backdrop__img { visibility: hidden; }
+/* half body in a set: a light depth of field behind the avatar (the 2D backdrop's blurred copy, in 3D) */
+html[data-layout="wide"] #set { transition: filter 1.6s var(--ease); }
+html[data-layout="wide"] body.has-set[data-view="detail"] #set { filter: blur(1.5px); }
+/* With a set the washes only keep text readable; the room around stays in view.
+   Home: a lighter edge vignette. Detail: a soft column behind the content, not the whole side. */
+body.has-set[data-view="home"] .wash--home { opacity: 0.55; }
+body.has-set .wash--detail {
+  background: linear-gradient(90deg, rgba(242, 244, 249, 0.35) 0%, rgba(242, 244, 249, 0) 22%, rgba(242, 244, 249, 0) 46%,
+    rgba(242, 244, 249, 0.72) 56%, rgba(242, 244, 249, 0.72) 84%, rgba(242, 244, 249, 0.45) 100%);
+}
+html[data-side="right"] body.has-set .wash--detail {
+  background: linear-gradient(90deg, rgba(242, 244, 249, 0.45) 0%, rgba(242, 244, 249, 0.72) 16%, rgba(242, 244, 249, 0.72) 44%,
+    rgba(242, 244, 249, 0) 54%, rgba(242, 244, 249, 0) 82%, rgba(242, 244, 249, 0.3) 100%);
 }
 
 /* everything over the canvas lets clicks through except real controls */
@@ -203,7 +238,9 @@ body[data-view="detail"] .wash--detail { opacity: 1; }
 }
 .wordmark__lambda { width: 0.72em; height: 0.77em; margin-right: 0.12em; }
 
-.mainnav { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); }
+/* centred by auto margins, not translate(-50%): half its width can be a fraction of a pixel, which
+   would draw every label between pixels, blurred */
+.mainnav { position: absolute; left: 0; right: 0; top: 18px; width: fit-content; margin: 0 auto; }
 .mainnav ul { display: flex; gap: 32px; }
 .nav-link {
   position: relative;
@@ -217,14 +254,14 @@ body[data-view="detail"] .wash--detail { opacity: 1; }
 }
 .nav-link:hover { color: var(--color-text-title); }
 .nav-link[aria-current] { color: var(--color-text-title); font-weight: 700; }
-/* one underline that slides to the current link (motion.js placeMarkers) */
+/* one dot that slides to the current link (motion.js placeMarkers); the same dot as the hover's */
 .nav-indicator {
   position: absolute;
   left: 0;
-  bottom: 0;
-  width: 32px;
-  height: 2px;
-  border-radius: 2px;
+  bottom: -1px;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-pill);
   background: var(--color-accent);
   pointer-events: none;
 }
@@ -240,25 +277,28 @@ body[data-view="detail"] .wash--detail { opacity: 1; }
   color: var(--color-text-title);
   cursor: pointer;
   text-decoration: none;
-  transition: transform var(--dur-fast) var(--ease);
+  transition: scale var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
-.icon-btn:active { transform: scale(0.96); }
-.greet {
-  height: 44px;
-  padding: 0 8px 0 20px;
+/* press: the `scale` property, which composes with the magnetic pull GSAP writes to transform (hover.js) */
+.icon-btn:active { scale: 0.94; }
+.lang-switch { height: 40px; padding: 4px; border-radius: var(--radius-pill); display: flex; gap: 2px; }
+.lang-switch__opt {
+  width: 32px;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-pill);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text-title);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
-.greet__dot { width: 28px; height: 28px; border-radius: var(--radius-pill); background: #fff; display: grid; place-items: center; }
-.greet__dot span { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--color-accent); transition: opacity 0.2s var(--ease); }
-.greet[aria-disabled="true"] { cursor: default; }
-.greet[aria-disabled="true"] .greet__dot span { opacity: 0.35; }
+.lang-switch__opt[aria-pressed="true"] { background: var(--color-accent); color: #fff; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .lang-switch__opt[aria-pressed="false"]:hover { color: var(--color-text-title); }
+}
 .menu-btn { display: none; }
 
 .menu-sheet {
@@ -300,19 +340,22 @@ body[data-view="detail"] .wash--detail { opacity: 1; }
 /* name plate in front of the podium */
 .nameplate {
   position: fixed;
-  left: 50%;
-  translate: -50% var(--rise, 0px);   /* --rise: GSAP's entrance (motion.js) */
-  margin: 0;
+  left: 0;
+  right: 0;
+  width: fit-content;
+  translate: 0 var(--rise, 0px);   /* --rise: GSAP's entrance (motion.js) */
+  margin: 0 auto;                  /* centred without translate(-50%), so the text sits on whole pixels */
   height: calc(38px * var(--ks));
   padding: 0 18px;
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
-  gap: 10px;
   white-space: nowrap;
 }
+.nameplate__line { display: flex; align-items: baseline; gap: 10px; line-height: 1; }
 .nameplate__name { font-family: var(--font-display); font-size: calc(15px * var(--ks)); color: var(--color-text-display); }
-.nameplate__dot { width: 4px; height: 4px; border-radius: var(--radius-pill); background: var(--color-accent); }
+/* on the baseline, lifted to the middle of the role's lowercase letters */
+.nameplate__dot { width: 4px; height: 4px; translate: 0 calc(-3px * var(--ks)); border-radius: var(--radius-pill); background: var(--color-accent); }
 .nameplate__role { font-size: calc(13px * var(--ks)); font-weight: 500; color: var(--color-text-secondary); }
 
 .signature { margin: 18px 0 0; font-family: var(--font-script); font-size: 54px; line-height: 1; color: var(--color-text-title); }
@@ -328,6 +371,8 @@ body[data-view="detail"] .wash--detail { opacity: 1; }
 @property --grow { syntax: '<number>'; inherits: false; initial-value: 1; }
 @property --px { syntax: '<number>'; inherits: false; initial-value: 0; }
 @property --py { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --rx { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --ry { syntax: '<number>'; inherits: false; initial-value: 0; }
 .topic-card {
   display: flex;
   flex-direction: column;
@@ -337,22 +382,28 @@ body[data-view="detail"] .wash--detail { opacity: 1; }
   border-radius: var(--radius-lg);
   text-decoration: none;
   /* --slide/--rise/--grow: GSAP's entrance (motion.js); --px/--py: cursor parallax (-1…1), scaled
-     by the card's --depth (px); --lift: the hover. GSAP never writes transform here, because it
-     would bake the card-float `translate` into it */
+     by the card's --depth (px); --lift: the hover; --rx/--ry: the hover tilt toward the cursor
+     (deg, hover.js). GSAP never writes transform here, because it would bake the card-float
+     `translate` into it */
   --depth: 5;
+  overflow: hidden;                     /* clips the hover sheen to the card's corners */
+  /* the offsets land on whole pixels and the 3D tilt is only there while it tilts (.is-tilting), so
+     a card at rest draws its text sharp: between pixels, or on a 3D layer, it reads blurred */
   transform:
-    translate(calc(var(--slide, 0px) + var(--px, 0) * var(--depth) * 1px),
-              calc(var(--rise, 0px) + var(--lift) + var(--py, 0) * var(--depth) * 1px))
-    scale(var(--grow, 1));
+    translate(round(calc(var(--slide, 0px) + var(--px, 0) * var(--depth) * 1px), 1px),
+              round(calc(var(--rise, 0px) + var(--lift) + var(--py, 0) * var(--depth) * 1px), 1px))
+    scale(var(--grow, 1))
+    var(--tilt-3d, );
   transition: --lift var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
+.topic-card.is-tilting { --tilt-3d: perspective(700px) rotateX(calc(var(--rx) * 1deg)) rotateY(calc(var(--ry) * 1deg)); }
 /* nearer cards drift further, so the four read as layers around the avatar */
 .topic-card[data-topic="about"] { --depth: 6; }
 .topic-card[data-topic="skills"] { --depth: 4; }
 .topic-card[data-topic="projects"] { --depth: 8; }
 .topic-card[data-topic="journey"] { --depth: 5; }
 @media (hover: hover) and (pointer: fine) {
-  .topic-card:hover { --lift: -2px; box-shadow: var(--shadow-hover), var(--glass-highlight); }
+  .topic-card:hover { --lift: -4px; box-shadow: var(--shadow-hover), var(--glass-highlight); }
   .topic-card:active { --lift: 0px; }
 }
 .icon-chip {
@@ -367,7 +418,7 @@ body[data-view="detail"] .wash--detail { opacity: 1; }
 }
 .topic-card__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-right: 28px; }
 .topic-card__title { font-size: calc(15px * var(--ks)); font-weight: 700; color: var(--color-text-title); }
-.topic-card__sub { font-size: calc(12px * var(--ks)); font-weight: 500; color: var(--color-text-muted); }
+.topic-card__sub { font-size: calc(12px * var(--ks)); font-weight: 500; color: var(--color-text-muted); text-wrap: balance; }
 .topic-card__arrow { position: absolute; right: calc(20px * var(--k)); bottom: calc(22px * var(--k)); color: var(--color-text-title); display: grid; }
 
 /* footer */
@@ -375,7 +426,50 @@ body[data-view="detail"] .wash--detail { opacity: 1; }
 .connect__label { font-size: 12px; font-weight: 500; color: var(--color-text-muted); }
 .connect__divider { width: 1px; height: 20px; background: var(--line); }
 .connect__links { display: flex; gap: 16px; }
-.mono-logo { width: 20px; height: 20px; border-radius: 4px; background: var(--ink-700); color: #fff; font-size: 12px; font-weight: 800; display: grid; place-items: center; }
+.mono-logo { width: 20px; height: 20px; border-radius: 4px; background: var(--ink-700); color: #fff; font-size: 12px; font-weight: 800; display: grid; place-items: center; transition: background-color var(--dur-fast) var(--ease); }
+
+/* ---------- hover: small, quick answers to the pointer ----------
+   Header, home cards and the connect links. Mouse and trackpad only (a tap fires a stray hover),
+   200ms or less on the page's one curve; reduced motion keeps the colour and drops the movement. */
+/* hover: a small dot pops in under the label (easeOutBack, a slight overshoot) */
+.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  opacity: 0;
+  transform: translateY(3px) scale(0.3);
+  transition: opacity 180ms var(--ease), transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.icon-chip { transition: background-color 200ms var(--ease); }
+/* hover.js: letters that move one by one, the card's light */
+.wordmark .char, .nav-link .char { display: inline-block; }
+.topic-card__sheen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(233, 237, 252, 0.45) 38%, rgba(233, 237, 252, 0) 70%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.topic-card .icon-chip, .topic-card__text { position: relative; }   /* above the sheen */
+@media (hover: hover) and (pointer: fine) {
+  .nav-link:not([aria-current]):hover::after { opacity: 1; transform: translateY(0) scale(1); }
+  .lang-switch__opt[aria-pressed="false"]:hover { background: rgba(255, 255, 255, 0.75); }
+  .icon-btn:hover { background: rgba(255, 255, 255, 0.85); box-shadow: var(--shadow-hover), var(--glass-highlight); }
+  .connect__links .icon-btn:hover { color: var(--color-accent-text); }
+  .connect__links .icon-btn:hover .mono-logo { background: var(--color-accent); }
+  .topic-card:hover .icon-chip { background: var(--accent-200); }
+}
 
 /* topic trail: one dot per stop of the scroll order (home, then each topic), bottom left on every
    page; a single marker slides to the current stop (motion.js placeMarkers) */
@@ -430,30 +524,154 @@ body[data-view="detail"] .wash--detail { opacity: 1; }
 .topic__title:focus { outline: none; }
 .topic__lead { margin: 14px 0 0; font-size: calc(15px * var(--ks)); line-height: 1.65; color: var(--color-text-muted); }
 
-.stack { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
-.stack__group { padding: 10px 12px 12px; border-radius: var(--radius-md); }
-.stack__name { margin: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--color-text-title); }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip {
-  height: 32px;
-  padding: 0 10px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-title);
-  box-shadow: none;
+/* Skills: the stack as paper memos taped to the panel, each a pastel from the books on the set's
+   shelf, a little askew. An odd one out at the end spans the row and lists in three columns. */
+.memos { margin-top: 28px; padding: 0 4px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 18px; }
+.memo {
+  --paper: #F3F1FE;
+  --tape: rgba(150, 160, 245, 0.55);
+  --tilt: -2deg;
+  --tape-tilt: -4deg;
+  position: relative;
+  isolation: isolate;          /* the paper (::before) stays behind the writing, inside the memo */
+  padding: 18px 16px 16px;
+  transform-origin: 50% 0;     /* it hangs from its tape: the swing in and a pull turn about it */
+  transition: translate var(--dur-slow) var(--ease);
 }
-.chip img { width: 16px; height: 16px; }
-.chip--missing { border: 1px dashed var(--ink-300); background: rgba(255, 255, 255, 0.75); }
-.chip__icon { display: grid; color: var(--icon-blue); }
+/* the paper, a little askew. Only the paper turns: the writing on it stays upright, because turned
+   text is drawn between pixels and reads blurred */
+.memo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 4px;
+  background: var(--paper);
+  rotate: var(--tilt);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 14px 24px -14px rgba(54, 72, 160, 0.45), 0 2px 4px rgba(54, 72, 160, 0.06);
+  transition-property: rotate, box-shadow;
+  transition-duration: var(--dur-slow);
+  transition-timing-function: var(--ease);
+}
+/* the memo the narration is on (ui.js renderStack) lifts off the panel and straightens a little;
+   one being pulled (hover.js memoPointer) comes up over its neighbours */
+.memo.is-active, .memo.is-held { translate: 0 -4px; }
+.memo.is-active::before, .memo.is-held::before {
+  rotate: calc(var(--tilt) * 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 22px 32px -14px rgba(54, 72, 160, 0.55), 0 2px 4px rgba(54, 72, 160, 0.06);
+}
+.memo.is-held { z-index: 1; }
+/* Draggable's grab cursor only where a memo can be pulled (wide) */
+html:not([data-layout="wide"]) .memo { cursor: auto !important; }
+.memo:nth-child(3n + 2) { --paper: #EAF6F1; --tape: rgba(140, 205, 185, 0.6); --tilt: 1.6deg; --tape-tilt: 3deg; }
+.memo:nth-child(3n) { --paper: #FCF5E1; --tape: rgba(240, 180, 200, 0.6); --tilt: -0.8deg; --tape-tilt: -2deg; }
+.memo:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.memo__tape {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  width: 72px;
+  height: 20px;
+  margin-left: -36px;
+  rotate: var(--tape-tilt);
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.4) 0 4px, transparent 4px 8px), var(--tape);
+  opacity: 0.85;
+}
+.memo__name { margin: 0 0 10px; font-family: var(--font-display); font-weight: 400; font-size: 14px; color: var(--color-text-heading); transition: color var(--dur-base) var(--ease); }
+.memo.is-active .memo__name { color: var(--color-accent-text); }
+/* written out when the panel arrives (motion.js writeMemo): the name and each label are boxes of
+   their own, inked in by a soft-edged mask; the name's hand-drawn underline is drawn by its dash offset */
+.memo__ink, .memo__label { display: inline-block; }
+.memo__ink { position: relative; }
+.memo__scribble { position: absolute; left: -2px; right: -4px; bottom: -6px; height: 7px; }
+.memo__scribble svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.memo__scribble path { fill: none; stroke: var(--color-accent); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 1; opacity: 0.55; }
+.memo__list { display: grid; gap: 9px 12px; }
+.memo:last-child:nth-child(odd) .memo__list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.memo__item { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; font-weight: 500; color: var(--color-text-title); white-space: nowrap; }
+/* a skill once the narration has named it: its logo sits on white in an accent ring (the pop is motion.js) */
+.memo__icon { width: 24px; height: 24px; flex: none; border-radius: 7px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.8); transition: background-color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease); }
+.memo__item.is-said .memo__icon { background: #fff; box-shadow: 0 0 0 1.5px rgba(78, 97, 232, 0.45), 0 4px 10px -4px rgba(54, 72, 160, 0.35); }
+.memo__icon img { width: 16px; height: 16px; }
+.memo__glyph { display: grid; color: var(--icon-blue); }
+/* laptop screens: tighter memos, so the panel fits above the subtitles without scrolling */
+@media (max-height: 800px) {
+  html[data-layout="wide"] .memos { margin-top: 20px; gap: 20px 16px; }
+  html[data-layout="wide"] .memo { padding: 14px 14px 12px; }
+  html[data-layout="wide"] .memo__name { margin-bottom: 8px; }
+  html[data-layout="wide"] .memo__list { gap: 5px 12px; }
+  html[data-layout="wide"] .memo__icon { width: 21px; height: 21px; border-radius: 6px; }
+  html[data-layout="wide"] .memo__icon img { width: 14px; height: 14px; }
+}
+@media (max-height: 740px) {
+  html[data-layout="wide"] .memos { margin-top: 16px; gap: 16px 14px; }
+  html[data-layout="wide"] .memo { padding: 12px 14px 10px; }
+}
 
 .facts, .rows { margin: 20px 0 0; display: flex; flex-direction: column; gap: 12px; }
 .facts__row { padding: 14px 16px; border-radius: var(--radius-md); display: flex; justify-content: space-between; gap: 16px; }
 .facts dt { font-size: 12px; font-weight: 700; color: var(--color-text-title); }
 .facts dd { margin: 0; font-size: 13px; color: var(--color-text-muted); text-align: right; }
+/* About: an ID badge on a lanyard; the strap rises from the clip, behind the card */
+/* --strap: how much of the band shows above the clip at rest; the card leaves room for it */
+.idcard { --strap: 104px; position: relative; max-width: 500px; margin: calc(var(--strap) - 8px) 0 0; }
+.idcard__strap {
+  position: absolute;
+  left: 50%;
+  top: calc(6px - var(--strap));
+  width: 18px;
+  height: var(--strap);
+  margin-left: -9px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(115, 128, 244, 0) 0, #7380F4 26px, var(--violet-600) 100%);
+}
+html:not([data-layout="wide"]) .idcard { --strap: 80px; }   /* phones: a little shorter in the sheet */
+.idcard__clip {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: -11px;
+  width: 36px;
+  height: 18px;
+  margin-left: -18px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #F3F5FB, #D6DCEB);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 10px -4px rgba(54, 72, 160, 0.35);
+}
+/* lanyard.js moves these two with the clip: the band's visible end turns about its lower end (at
+   the clip), the card (clip and body) swings from the clip */
+.idcard__strap { transform-origin: 50% calc(100% - 6px); }
+.idcard__swing { position: relative; z-index: 1; transform-origin: 50% 0; user-select: none; -webkit-user-select: none; }
+.idcard__proxy { position: absolute; left: 0; top: 0; width: 1px; height: 1px; visibility: hidden; pointer-events: none; }
+.idcard__body { position: relative; z-index: 1; padding: 24px 22px 16px; border-radius: var(--radius-xl); }
+.idcard__head { display: flex; align-items: center; gap: 18px; }
+.idcard__photo { width: 84px; height: 112px; flex: none; object-fit: cover; border-radius: var(--radius-md); border: 3px solid #fff; box-shadow: 0 8px 20px -10px rgba(54, 72, 160, 0.4); }
+.idcard__id { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.idcard__name { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: calc(26px * var(--ks)); line-height: 1.2; color: var(--color-text-heading); text-wrap: balance; }
+.idcard__name:focus { outline: none; }
+.idcard__roles { margin: 0; font-size: 13px; line-height: 1.5; color: var(--color-text-muted); }
+.idcard__rows { margin: 18px 0 0; padding: 16px 0 0; display: flex; flex-direction: column; gap: 12px; border-top: 1px dashed rgba(137, 157, 189, 0.55); }
+.idcard__row { display: flex; align-items: center; gap: 12px; }
+.idcard__icon { width: 32px; height: 32px; flex: none; border-radius: 9px; display: grid; place-items: center; background: var(--accent-100); color: var(--icon-blue); transition-property: background-color, color, scale; transition-duration: var(--dur-base); transition-timing-function: var(--ease); }
+/* the row the narration is on */
+.idcard__row.is-active .idcard__icon { background: var(--color-accent); color: #fff; scale: 1.1; }
+.idcard__row.is-active .idcard__title { color: var(--color-accent-text); }
+.idcard__text { display: flex; flex-direction: column; gap: 1px; }
+.idcard__title { font-size: 14px; font-weight: 700; color: var(--color-text-title); transition: color var(--dur-base) var(--ease); }
+.idcard__meta { font-size: 12px; color: var(--color-text-muted); }
+/* laptop screens: a smaller photo and tighter rows keep the panel clear of the subtitles */
+@media (max-height: 800px) {
+  html[data-layout="wide"] .idcard { --strap: 92px; }
+  html[data-layout="wide"] .idcard__body { padding: 20px 20px 14px; }
+  html[data-layout="wide"] .idcard__photo { width: 72px; height: 96px; }
+  html[data-layout="wide"] .idcard__rows { margin-top: 14px; padding-top: 12px; gap: 8px; }
+  html[data-layout="wide"] .idcard__icon { width: 28px; height: 28px; }
+}
+@media (max-height: 740px) {
+  html[data-layout="wide"] .idcard { --strap: 80px; }
+  html[data-layout="wide"] .idcard__photo { width: 64px; height: 86px; }
+}
 .row { padding: 14px 16px; border-radius: var(--radius-md); display: flex; align-items: center; gap: 14px; text-decoration: none; }
 a.row { justify-content: space-between; transition: transform var(--dur-fast) var(--ease); }
 @media (hover: hover) and (pointer: fine) {
@@ -463,20 +681,234 @@ a.row { justify-content: space-between; transition: transform var(--dur-fast) va
 .row__title { font-size: 14px; font-weight: 700; color: var(--color-text-title); }
 .row__meta { font-size: 12px; color: var(--color-text-muted); }
 .row__arrow { display: grid; color: var(--color-text-title); }
+/* certificates (ui.js renderCerts): a fanned deck. Sizes and offsets are in cqw of the deck, so it
+   fits the wide column and the compact sheet alike; side cards stay inside the panel's clip. */
+.certs { margin-top: 10px; }
+.certs__deck {
+  position: relative;
+  container-type: inline-size;
+  aspect-ratio: 1.6 / 1;
+  touch-action: pan-y;                  /* horizontal drags swipe the deck, vertical ones scroll */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.cert {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: calc(3 - var(--i));
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  opacity: 0;
+  transform: translate(-50%, calc(-50% + 5cqw)) scale(0.94);   /* stacked, until .is-fanned */
+  transition: transform var(--dur-slow) var(--ease), opacity 300ms var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.cert[data-shape="wide"] { --side: 20cqw; width: 72cqw; }
+.cert[data-shape="tall"] { --side: 28cqw; width: 38cqw; }   /* further out, or a wide front card hides it */
+.is-fanned .cert { opacity: 1; }
+.is-fanned .cert[data-slot="front"] { z-index: 3; transform: translate(-50%, -50%); }
+.is-fanned .cert[data-slot="left"] { z-index: 1; transform: translate(calc(-50% - var(--side)), calc(-50% + 3cqw)) rotate(-8deg) scale(0.76); }
+.is-fanned .cert[data-slot="right"] { z-index: 2; transform: translate(calc(-50% + var(--side)), calc(-50% + 3cqw)) rotate(7deg) scale(0.76); }
+.is-fanning .cert { transition-delay: calc(var(--i) * 60ms); }
+.cert__lift {
+  display: block;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 5px;
+  border-radius: var(--radius-md);
+  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-3);
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), scale 120ms var(--ease);
+}
+.cert__lift img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 7px; pointer-events: none; }
+.cert:active .cert__lift { scale: 0.98; }
+.cert:focus-visible { outline: none; }
+.cert:focus-visible .cert__lift { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) {
+  .cert:hover .cert__lift { transform: translateY(-5px); box-shadow: var(--shadow-hover); }
+}
+/* a fixed height for the title and its meta, so the panel keeps its height from card to card */
+.certs__caption { min-height: 42px; margin-top: 8px; display: flex; align-items: center; }
+.certs__bar { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.certs__open {
+  flex: none;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-50);
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, scale 160ms var(--ease);
+}
+.certs__open:active { scale: 0.97; }
+.certs__open-icon { display: grid; }
+.certs__pills { display: flex; gap: 8px; }
+.certs__pill {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.certs__pill[aria-pressed="true"] { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+  .certs__open:hover { background: var(--accent-200); }
+  .certs__pill[aria-pressed="false"]:hover { color: var(--color-text-title); background: rgba(255, 255, 255, 0.8); }
+}
+
+/* the full certificate: a modal <dialog> over everything; motion.js viewerIn/Out move its parts */
+.cert-viewer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+  color: inherit;
+  font: inherit;
+}
+.cert-viewer[open] { display: grid; place-items: center; }
+.cert-viewer::backdrop { background: transparent; }
+.cert-viewer__scrim { position: absolute; inset: 0; background: rgba(25, 40, 60, 0.55); cursor: zoom-out; }
+.cert-viewer__fig { position: relative; margin: 0; padding: 0 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cert-viewer__fig img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(900px, calc(100vw - 32px));
+  max-height: calc(100vh - 140px);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  box-shadow: 0 30px 60px -24px rgba(12, 20, 40, 0.55);
+}
+.cert-viewer__caption { padding: 6px 14px; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.88); font-size: 13px; font-weight: 700; color: var(--color-text-title); text-align: center; }
+.cert-viewer__close { position: absolute; top: 20px; right: 20px; }
+
 .timeline__num { width: 28px; height: 28px; flex: none; border-radius: var(--radius-pill); background: var(--accent-200); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--color-text-title); }
 
-/* detail: narration as film subtitles — one cue, at most two lines, words lighting up as
-   they are spoken (subtitle.js). Hidden from screen readers: the transcript is in the page. */
+/* Journey: a paper map taped to the panel like the Skills memos, a dotted trail winding down its
+   left edge through one landmark badge per stop, oldest at the top (ui.js renderTrail). The stop
+   the narration is on lights up; the ones behind it turn accent, the ones ahead stay grey. */
+.route { --row: 60px; margin-top: 22px; }
+.route__map {
+  position: relative;
+  isolation: isolate;        /* the paper (::before) stays behind the trail and the stops */
+  padding: 12px 12px 12px 8px;
+  transform-origin: 50% 0;   /* it hangs from its tape: it swings in about it (motion.js panelsIn) */
+}
+/* the paper, a little askew; only the paper turns, so the stops' text stays upright and sharp (as the memos) */
+.route__map::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 6px;
+  background-color: #F6F5FE;
+  background-image:
+    repeating-radial-gradient(circle at 88% 12%, rgba(105, 111, 249, 0.09) 0 1px, transparent 1px 16px),
+    repeating-radial-gradient(circle at 92% 92%, rgba(46, 143, 122, 0.08) 0 1px, transparent 1px 14px);
+  rotate: -0.6deg;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 14px 24px -14px rgba(54, 72, 160, 0.45), 0 2px 4px rgba(54, 72, 160, 0.06);
+}
+.route__tape {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  width: 72px;
+  height: 20px;
+  margin-left: -36px;
+  rotate: -4deg;
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.4) 0 4px, transparent 4px 8px), rgba(150, 160, 245, 0.55);
+  opacity: 0.85;
+}
+.route__path { position: absolute; left: 8px; top: 12px; bottom: 12px; width: 44px; }
+.route__path svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.route__path path { fill: none; stroke: rgba(78, 97, 232, 0.55); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 0.5 8; }
+/* the trail covered so far: solid, uncovered down to the traveller (traveler.js sets the clip) */
+.route__path--done { clip-path: inset(0 0 100% 0); }
+.route__path--done path { stroke: var(--color-accent); stroke-dasharray: none; }
+/* the traveller: the avatar's face, standing over the active stop's badge (its halo shows around it);
+   traveler.js moves it by transform from the map's top left corner */
+.route__me { position: absolute; left: 0; top: 0; z-index: 1; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; opacity: 0; visibility: hidden; }
+.route__me-face { display: block; width: 100%; height: 100%; border-radius: var(--radius-pill); overflow: hidden; background: var(--accent-100); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--color-accent), 0 8px 18px -6px rgba(54, 72, 160, 0.5); }
+.route__me-face img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 45%; }
+.route__stops { position: relative; margin: 0; padding: 0; list-style: none; }
+.route-stop { height: var(--row); display: flex; align-items: center; }
+.route-stop__btn { width: 100%; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; font: inherit; text-align: left; color: inherit; cursor: pointer; }
+.route-stop__badge {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  margin: 0 5px;
+  box-sizing: border-box;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--ink-300);
+  background: #fff;
+  color: var(--ink-500);
+  display: grid;
+  place-items: center;
+  transition-property: background-color, border-color, color, box-shadow, scale;
+  transition-duration: var(--dur-base);
+  transition-timing-function: var(--ease);
+}
+.route-stop__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 7px 10px; border-radius: var(--radius-sm); transition: background-color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease); }
+.route-stop__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.route-stop__title { font-size: 13.5px; font-weight: 700; color: var(--color-text-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.route-stop__meta { font-size: 11.5px; font-weight: 500; color: var(--color-text-muted); }
+.route-stop__years { flex: none; padding: 2px 8px; border-radius: var(--radius-pill); background: rgba(78, 97, 232, 0.1); color: var(--color-accent-text); font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.route-stop__years.is-now { background: var(--color-accent); color: #fff; }
+.route-stop.is-done .route-stop__badge { border-color: var(--color-accent); color: var(--color-accent); }
+.route-stop.is-active .route-stop__badge { background: var(--color-accent); border-color: #fff; color: #fff; box-shadow: 0 0 0 2px var(--color-accent), 0 0 0 7px rgba(78, 97, 232, 0.18); scale: 1.08; }
+.route-stop.is-active .route-stop__text { background: #fff; box-shadow: 0 10px 24px -12px rgba(54, 72, 160, 0.35); }
+.route-stop__btn:focus-visible { outline: none; }
+.route-stop__btn:focus-visible .route-stop__text { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+@media (hover: hover) and (pointer: fine) {
+  .route-stop:not(.is-active) .route-stop__btn:hover .route-stop__text { background: rgba(255, 255, 255, 0.75); }
+}
+/* laptop screens: shorter stops, so the map fits above the subtitles without scrolling */
+@media (max-height: 800px) {
+  html[data-layout="wide"] .route { --row: 52px; margin-top: 18px; }
+}
+@media (max-height: 740px) {
+  html[data-layout="wide"] .route { --row: 48px; margin-top: 16px; }
+}
+
+/* detail: narration as film subtitles — one cue, always one line, words lighting up as they are
+   spoken (subtitle.js, which cuts the cues to fit this width). Hidden from screen readers: the
+   transcript is in the page. Wide enough for most sentences in one go, clear of the player. */
 .subtitle {
   position: fixed;
   z-index: 11;
   left: 0;
   right: 0;
   bottom: 40px;
-  max-width: 680px;
+  max-width: 820px;
   margin: 0 auto;
   padding: 0 16px;
   text-align: center;
+  font-family: var(--font-rounded);
   font-size: 22px;
   line-height: 1.75;
   font-weight: 700;
@@ -485,15 +917,17 @@ a.row { justify-content: space-between; transition: transform var(--dur-fast) va
 }
 .subtitle.is-off { display: none; }
 .subtitle__line {
+  white-space: nowrap;   /* never a second line, should a measurement come out a little short */
   padding: 3px 14px;
   border-radius: 8px;
   background: rgba(25, 40, 60, 0.82);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
-  color: rgba(255, 255, 255, 0.7);
+  color: #fff;
 }
-.subtitle .w { transition: color 100ms ease; }
-.subtitle .w.is-spoken { color: #fff; }
+/* unspoken words are dimmed with opacity, not colour: an opacity fade composites, a colour fade repaints */
+.subtitle .w { opacity: 0.7; transition: opacity 100ms ease; }
+.subtitle .w.is-spoken { opacity: 1; }
 
 /* detail: player, bottom right — progress is the ring around play; the header has the sound toggle */
 .player {
@@ -572,6 +1006,10 @@ html[data-layout="wide"] .topic {
   max-height: calc(100vh - var(--fy) - 116px * var(--k) - 140px);   /* ends above the subtitles */
   overflow-y: auto;
   padding: 0 12px 24px 0;               /* room for the scrollbar and the cards' shadows */
+}
+/* the fade at the foot that says there's more, only when there is (ui.js fitTopic): a mask draws the
+   whole panel on a layer of its own, where Chrome turns ClearType off and the text reads softer */
+html[data-layout="wide"] .topic[data-overflow] {
   -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 28px), transparent);
   mask-image: linear-gradient(180deg, #000 calc(100% - 28px), transparent);
 }
@@ -579,6 +1017,17 @@ html[data-layout="wide"] .player { position: fixed; right: calc(var(--fx) + 40px
 
 /* mirrored detail (Skills, Journey): content · AVATAR — the avatar stands at HALF_X.right (stage.js) */
 html[data-layout="wide"][data-side="right"] .topic { left: calc(var(--fx) + 280px * var(--k)); }
+/* Certificates: a wider column for the deck, and on short screens the deck narrows (keeping its
+   shape) so the panel fits above the subtitles without scrolling */
+html[data-layout="wide"] .topic[data-body="certs"],
+html[data-layout="wide"] .topic[data-body="idcard"],
+html[data-layout="wide"] .topic[data-body="stack"],
+html[data-layout="wide"] .topic[data-body="trail"] { width: calc(500px * var(--k) + 12px); }
+/* About fits without scrolling (sizes below), so the hanging card may swing out of the column */
+html[data-layout="wide"] .topic[data-body="idcard"] { overflow: visible; -webkit-mask-image: none; mask-image: none; }
+/* Skills: a memo pulled off its spot (hover.js memoPointer, only when the panel isn't scrolling) may leave the column */
+html[data-layout="wide"] .topic:has(.memo.is-loose) { overflow: visible; -webkit-mask-image: none; mask-image: none; }
+html[data-layout="wide"] .topic[data-body="certs"] .certs__deck { width: min(100%, (100vh - var(--fy) - 116px * var(--k) - 384px) * 1.6); margin: 0 auto; }
 html[data-side="right"] .wash--detail {
   background: linear-gradient(90deg, rgba(242, 244, 249, 0.85) 0%, rgba(242, 244, 249, 0.8) 40%, rgba(242, 244, 249, 0) 50%, rgba(242, 244, 249, 0) 72%, rgba(242, 244, 249, 0.8) 80%, rgba(242, 244, 249, 0.9) 100%);
 }
@@ -588,15 +1037,17 @@ html[data-side="right"] .wash--detail {
    ===================================================================== */
 html[data-layout="compact"] .topbar { height: 64px; padding: 0 16px 0 20px; }
 html[data-layout="compact"] .wordmark { font-size: 17px; }
-html[data-layout="compact"] .mainnav,
-html[data-layout="compact"] .greet { display: none; }
+html[data-layout="compact"] .mainnav { display: none; }
 html[data-layout="compact"] .menu-btn { display: grid; }
 html[data-layout="compact"] .topbar__actions { gap: 8px; }
 html[data-layout="compact"] .icon-btn { width: 44px; height: 44px; }
+html[data-layout="compact"] .lang-switch { height: 44px; }
+html[data-layout="compact"] .lang-switch__opt { width: 34px; }
 html[data-layout="compact"] .wash--home { background: linear-gradient(180deg, rgba(242, 244, 249, 0.7) 0%, rgba(242, 244, 249, 0) 14%, rgba(242, 244, 249, 0) 68%, rgba(242, 244, 249, 0.9) 80%); }
 html[data-layout="compact"] .wash--detail { display: none; }
 
-html[data-layout="compact"] .nameplate { bottom: calc(228px + env(safe-area-inset-bottom)); height: 34px; padding: 0 14px; gap: 8px; }
+html[data-layout="compact"] .nameplate { bottom: calc(228px + env(safe-area-inset-bottom)); height: 34px; padding: 0 14px; }
+html[data-layout="compact"] .nameplate__line { gap: 8px; }
 html[data-layout="compact"] .nameplate__name { font-size: 14px; }
 html[data-layout="compact"] .nameplate__role { font-size: 12px; }
 html[data-layout="compact"] .nameplate__more,
@@ -676,6 +1127,16 @@ html[data-layout="compact"] .detail-sheet__body::before { content: ''; display: 
 }
 html[data-layout="compact"] .topic__title { font-size: 26px; line-height: 1.22; margin-top: 8px; }
 html[data-layout="compact"] .topic__lead { font-size: 14px; }
+html[data-layout="compact"] .certs__open { flex: 1 1 100%; height: 44px; justify-content: center; }
+html[data-layout="compact"] .certs__pills { flex: 1 1 100%; }
+html[data-layout="compact"] .certs__pill { flex: 1; height: 44px; }
+html[data-layout="compact"] .route { --row: 54px; margin-top: 18px; }
+/* a little tighter so "Politeknik Negeri Jakarta" and its years still share one line at 390px */
+html[data-layout="compact"] .route-stop__btn { gap: 6px; }
+html[data-layout="compact"] .route-stop__text { padding: 6px 8px; }
+html[data-layout="compact"] .route-stop__title { font-size: 13px; }
+html[data-layout="compact"] .route-stop__years { padding: 2px 6px; font-size: 10px; }
+html[data-layout="compact"] .cert-viewer__close { top: calc(12px + env(safe-area-inset-top)); right: 12px; }
 /* the sheet scrolls under the subtitle and the bottom row: it fades out before it gets there */
 html[data-layout="compact"] .view--detail::after {
   content: '';
@@ -724,11 +1185,20 @@ html[data-layout="compact"] .player__cc { width: 44px; height: 44px; }
 .loader p { margin: 0; }
 
 /* press feedback: the `scale` property, so it never fights GSAP's transform on the same element */
-.player__play, .player__cc, .greet { transition-property: scale, background, color; transition-duration: 160ms; transition-timing-function: var(--ease); }
-.player__play:active, .player__cc:active, .greet:active { scale: 0.97; }
+.player__play, .player__cc { transition-property: scale, background, color; transition-duration: 160ms; transition-timing-function: var(--ease); }
+.player__play:active, .player__cc:active { scale: 0.97; }
 
 /* reduced motion is gentler, not none: fades and colour changes stay, movement goes */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
-  .topic-card, a.row, .icon-btn, .player__play, .player__cc, .greet { transform: none !important; scale: none !important; }
+  .topic-card, a.row, .icon-btn, .player__play, .player__cc { transform: none !important; scale: none !important; }
+  /* hover cues keep their colour and fade, not their movement */
+  .nav-link::after { transform: none !important; }
+  /* the deck's slots stay (they are its layout); cards cut between them and only fade in */
+  .cert { transition: opacity 300ms ease !important; }
+  .cert__lift, .certs__open { transform: none !important; scale: none !important; }
+  .route-stop__badge, .idcard__icon { scale: none !important; }
+  /* the memo the narration is on keeps its shadow and colour, not the lift */
+  .memo.is-active { translate: none !important; }
+  .memo.is-active::before { rotate: var(--tilt) !important; }
 }

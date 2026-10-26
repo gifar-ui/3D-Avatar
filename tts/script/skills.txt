@@ -1,0 +1,9 @@
+So here’s my daily stack.
+Everything here, I’ve picked up on the job and in class.
+At the core, React and TypeScript.
+And for the server side, I work with Node.js and Express.
+On the frontend, I use React, TypeScript, Tailwind CSS and Vite.
+For backend and databases, it’s Node.js, Express, Postgres and MySQL.
+And for everyday tools, there’s Git, Docker, Linux, my trusty IDE,
+and of course, AI agents to help me work a little smarter.
+That’s it, my everyday toolkit.

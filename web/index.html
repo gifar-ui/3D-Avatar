@@ -3,28 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Gifar · 3D Portfolio</title>
-    <meta name="description" content="Gifar — Frontend Developer & Creative Technologist. Meet the 3D avatar and explore skills, projects, and journey." />
+    <title>Giffar · 3D Portfolio</title>
+    <meta name="description" content="Giffar, a software engineer specializing in frontend, based in Bekasi. This portfolio is a talking 3D avatar built with Three.js and GSAP. Click a topic to hear about my skills, certificates and journey." />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%234E61E8'/></svg>" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Mochiy+Pop+One&family=Mrs+Saint+Delafield&display=swap" />
+    <!-- the model, its animations and the studio set start downloading with the page, not after the script runs -->
+    <link rel="preload" href="/models/avatar_v2.vrm" as="fetch" crossorigin />
+    <link rel="preload" href="/animations/idle.json" as="fetch" crossorigin />
+    <link rel="preload" href="/animations/walk.json" as="fetch" crossorigin />
+    <link rel="preload" href="/sets/home/set.glb" as="fetch" crossorigin />
   </head>
   <body data-view="home">
     <div class="backdrop" aria-hidden="true">
-      <img class="backdrop__img" src="/images/background-avatar.png" alt="" width="1536" height="1024" decoding="async" fetchpriority="high" />
+      <img class="backdrop__img" src="/images/background-avatar.webp" alt="" width="1536" height="1024" decoding="async" fetchpriority="high" />
       <img class="backdrop__img backdrop__img--blur" src="/images/background-avatar-blur.jpg" alt="" width="1536" height="1024" decoding="async" fetchpriority="low" />
     </div>
+    <!-- the 3D set (studio, workspace…) once loaded; it covers the 2D backdrop, which stays as the fallback -->
+    <canvas id="set" aria-hidden="true"></canvas>
     <div class="wash wash--home" aria-hidden="true"></div>
     <div class="wash wash--detail" aria-hidden="true"></div>
-    <canvas id="stage" role="img" aria-label="Gifar’s 3D avatar. Click the avatar to make it wave."></canvas>
+    <canvas id="stage" role="img" aria-label="Giffar’s 3D avatar. Click the avatar to make it wave."></canvas>
 
     <header class="topbar">
-      <a class="wordmark" href="#/" aria-label="GIFAR, home"></a>
+      <a class="wordmark" href="#/" aria-label="GIFFAR, home"></a>
       <nav class="mainnav" aria-label="Main"><ul id="mainnav-list"></ul><span class="nav-indicator" aria-hidden="true"></span></nav>
       <div class="topbar__actions">
+        <div class="lang-switch glass-1" id="lang-switch" role="group" aria-label="Language">
+          <button class="lang-switch__opt" type="button" data-lang="en" lang="en" aria-pressed="true">EN</button>
+          <button class="lang-switch__opt" type="button" data-lang="id" lang="id" aria-pressed="false">ID</button>
+        </div>
         <button class="icon-btn glass-1" id="btn-sound" type="button" aria-pressed="false" aria-label="Mute narration"></button>
-        <button class="greet glass-1" id="btn-greet" type="button"><span id="greet-label"></span><span class="greet__dot" aria-hidden="true"><span></span></span></button>
         <button class="icon-btn glass-1 menu-btn" id="btn-menu" type="button" aria-expanded="false" aria-controls="menu-sheet" aria-label="Open menu"></button>
       </div>
     </header>
@@ -76,7 +83,7 @@
     <div id="loader" class="loader" role="status" aria-live="polite">
       <div class="loader__mark" aria-hidden="true"></div>
       <div class="loader__bar"><span id="loader-fill"></span></div>
-      <p id="loader-text">Memuat avatar… 0%</p>
+      <p id="loader-text">Loading avatar… 0%</p>
     </div>
 
     <script type="module" src="/src/main.js"></script>

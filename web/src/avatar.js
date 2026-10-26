@@ -150,6 +150,7 @@ export class AvatarRig {
     if (from !== undefined) {
       this.root.position.x = from;
       this.root.rotation.y = dir * Math.PI / 2;
+      this.springsReset = true;
       if (this.walkW < 0.5) this.walk.time = 0;
       this.walkW = this.walkTarget = 1;
     } else if (Math.abs(toX - x) < 0.01) {
@@ -169,6 +170,7 @@ export class AvatarRig {
     this.root.position.x = x;
     this.root.rotation.y = 0;
     this.walkW = this.walkTarget = 0;
+    this.springsReset = true;
   }
 
   get walking() {
@@ -261,6 +263,12 @@ export class AvatarRig {
     this.#attention(t, dt, standing);
     this.#face(t, dt);
     this.vrm.update(dt);
+    // a jump in place (entering from the other edge already turned the other way, or a placement)
+    // would read to the hair and the tie as a violent jerk and fling them; they start from rest instead
+    if (this.springsReset) {
+      this.springsReset = false;
+      this.vrm.springBoneManager?.reset();
+    }
     this.#friendlyFace();
   }
 

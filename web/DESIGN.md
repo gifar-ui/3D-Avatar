@@ -9,8 +9,8 @@ colors:
   ink-900: "#19283C"
   ink-800: "#0C2B6B"
   ink-700: "#223C6F"
-  ink-600: "#586A8A"
-  ink-500: "#5F6E8C"
+  ink-600: "#3F4E6B"
+  ink-500: "#46556F"
   ink-300: "#899DBD"
   accent-600: "#3D52D9"
   accent-500: "#4E61E8"
@@ -23,7 +23,8 @@ colors:
   line-subtle: "#DEE2EC"
 typography:
   display-family: "Mochiy Pop One"
-  family: "M PLUS Rounded 1c"
+  family: "system-ui (Segoe UI / SF)"
+  subtitle-family: "M PLUS Rounded 1c"
   display: { size: 52px, lineHeight: 1.14, weight: 400, family: display }
   h1: { size: 38px, lineHeight: 1.18, weight: 400, family: display }
   h2: { size: 22px, lineHeight: 1.25, weight: 700 }
@@ -187,8 +188,8 @@ terhadap `bg` `#F2F4F9`.
 | `--color-text-display` (`ink-900`) | `#19283C` | "Hello," | 13.5 | headline intro |
 | `--color-text-heading` (`ink-800`) | `#0C2B6B` | "What do" | 12.1 | heading detail |
 | `--color-text-title` (`ink-700`) | `#223C6F` | judul kartu | 9.8 | judul kartu, panel, menu |
-| `--color-text-secondary` (`ink-600`) | `#586A8A` | role line | 5.0 ✅ | teks sekunder |
-| `--color-text-muted` (`ink-500`) | `#5F6E8C` | **disesuaikan** | 4.7 ✅ | paragraf, subjudul kartu, nav tidak aktif |
+| `--color-text-secondary` (`ink-600`) | `#3F4E6B` | role line, **digelapkan** | 7.6 ✅ | teks sekunder |
+| `--color-text-muted` (`ink-500`) | `#46556F` | **digelapkan** | 6.8 ✅ | paragraf, subjudul kartu, nav tidak aktif |
 | `--color-decor` (`ink-300`) | `#899DBD` | subjudul kartu | 2.5 ❌ | **hanya dekoratif** (placeholder, disabled, garis) |
 | `--color-accent-text` (`accent-600`) | `#3D52D9` | **disesuaikan** | 5.6 ✅ | overline, link, fokus, bar menu aktif |
 | `--color-accent` (`accent-500`) | `#4E61E8` | "Gifar" | 4.5 ✅ | kata aksen di headline, underline nav aktif |
@@ -212,17 +213,25 @@ terhadap `bg` `#F2F4F9`.
 
 ### 3.2 Tipografi
 
-**Typeface** (diubah 2026-10-16 atas permintaan: nuansa anime Jepang). Keduanya dari Google Fonts:
+**Typeface** (diubah 2026-10-16 atas permintaan: nuansa anime Jepang). Keduanya dari Google Fonts, di-host sendiri lewat `@fontsource` (hanya subset Latin, lihat §15):
 
 | Peran | Font | Alasan |
 |---|---|---|
 | Display: headline, H1, wordmark | **Mochiy Pop One** (satu bobot, 400) | huruf pop tebal yang membulat, khas judul anime dan game Jepang |
-| Teks & UI | **M PLUS Rounded 1c** (400 · 500 · 700 · 800) | gothic bulat khas UI aplikasi/game Jepang, nyaman untuk paragraf |
+| Teks & UI | **font sistem** (`system-ui`: Segoe UI di Windows, SF di Mac) | digambar pas ke grid piksel, tetap tajam di 11–15px |
+| Subtitle film | **M PLUS Rounded 1c** (700 saja) | besar dan tebal, jadi tetap tajam; menjaga nuansa bulat yang ramah |
+
+- **Subtitle selalu satu baris** (`subtitle.js`). Lebar tiap cue diukur dengan font subtitle itu
+  sendiri (canvas) terhadap lebar baris di layar (maks. 820px di wide). Kalimat yang tidak muat
+  dipotong menjadi cue sesedikit mungkin dengan panjang serata mungkin, dan koma diutamakan sebagai
+  titik potong. Cue dipotong ulang saat ukuran layar berubah atau font selesai dimuat.
 
 - Keduanya punya glyph Jepang (hiragana/katakana), sehingga aksen seperti ギファル tetap konsisten.
 - **Mochiy hanya punya satu bobot.** Elemen display **wajib** `font-weight: 400`, karena bobot lain
   membuat browser menebalkan huruf secara sintetis. `letter-spacing: 0`.
-- M PLUS Rounded tidak punya bobot 600; role yang tertulis 600 dirender 700.
+- **Kenapa teks kecil tidak pakai M PLUS Rounded lagi:** di Windows, ujung bulat dan batang tipisnya
+  tidak jatuh pas di piksel, jadi teks 11–15px terlihat buram (diuji di Chrome dengan ClearType). Font
+  bulat tetap dipakai di tempat yang besar: judul (Mochiy) dan subtitle (M PLUS Rounded 700).
 - Mochiy lebih lebar ±5% dari font sebelumnya. Ukuran display diturunkan (56 → 52px) agar "I'm Gifar"
   (≈251px) tidak menabrak kartu "Who am I?".
 - Alternatif yang dibandingkan di kanvas: **B** Dela Gothic One + M PLUS Rounded 1c (gaya *title
@@ -288,6 +297,14 @@ Tiga tingkat. Semakin tinggi tingkatnya, semakin solid dan semakin jelas bayanga
 | `--dur-slow` | 450ms | panel detail masuk |
 | kamera masuk | 1600ms easeInOutCubic | full → half (sudah ada di `camera.js`) |
 | kamera keluar | 1300ms easeInOutCubic | half → full |
+
+**Ketajaman teks (aturan):** teks yang diam tidak boleh berada di bawah elemen yang diputar, digeser
+setengah piksel, diberi transform 3D, atau di-mask, karena Chrome menggambarnya di antara piksel atau
+di layer terpisah tanpa ClearType, sehingga terlihat buram. Jadi: pusatkan dengan `margin: auto`,
+bukan `translate(-50%)`; kertas yang miring memutar `::before`-nya saja, bukan isinya; offset
+parallax dibulatkan (`round(…, 1px)`); tilt 3D hanya saat hover (`.is-tilting`); mask pudar panel
+hanya saat isinya meluap (`[data-overflow]`). Pengecualian yang diterima: teks di atas kaca
+(`backdrop-filter`), karena memang begitu efek kacanya.
 
 ### 3.6 Layering & breakpoint
 
@@ -363,6 +380,24 @@ disabled (bila relevan). Fokus = ring `2px solid --color-accent-text`, offset 2p
   `--glass-2` radius 12 dengan judul `caption` 600 + baris chip.
 - **Chip teknologi:** `--glass-1`, radius 10, tinggi 42, logo 18px **berwarna asli brand** + label
   `caption`. Chip bersifat informasi, **bukan** tombol (tanpa hover lift).
+- **Motion "Skills"** (memo kertas, `renderStack` di `ui.js`): memo ditempel satu per satu, berayun
+  dari selotipnya (`panelsIn`), lalu "ditulis" (`writeMemo`, jeda 0.15 s antar memo): judul grup
+  muncul seperti tinta meresap (terbuka kiri→kanan dengan tepi lembut 14px, tanpa pensil), garis
+  bawah coretan tangan tergambar, lalu tiap skill: logo dicap (pop kecil) dan namanya muncul dengan
+  tinta yang sama. Lama menulis mengikuti panjang kata (35 ms/huruf). Reduced motion: skill hanya
+  fade. Memo mengikuti narasi: memo yang sedang dibahas terangkat dan sedikit
+  lurus (`lines` di `content.js`), logo skill *pop* saat namanya diucapkan (dicocokkan per kata) lalu
+  diberi cincin aksen, dan kalimat penutup membuat semua logo pop bergantian. Dengan mouse: logo pop
+  saat di-hover, dan memo bisa ditarik lalu memantul kembali ke tempatnya (hanya di wide, saat panel
+  tidak scroll). Reduced motion: tanpa pop, ayunan, dan angkatan; warna dan cincin tetap.
+- **Masuk "Journey"** (`panelsIn`): peta ditempel dan berayun dari selotipnya, lalu jalur titik-titik
+  tergambar dari atas ke bawah (±0.75 s), dan tiap titik muncul saat jalur sampai: badge pop, teks
+  bergeser masuk. Reduced motion: hanya fade, jalur langsung utuh.
+- **Motion "Journey"** (`traveler.js`): wajah avatar (`traveler` di `content.js`) berjalan menyusuri
+  kurva jalur ke titik yang sedang dibahas narasi atau diklik, sedikit bergoyang seperti langkah
+  avatar, lalu pop saat tiba dan berdiri di atas badge titik itu. Jalur yang sudah dilewati menjadi
+  garis aksen solid. Muncul di titik pertama, tetap di titik terakhir di akhir narasi, hilang saat
+  narasi diputar ulang. Reduced motion: pindah langsung tanpa berjalan, goyang, dan pop.
 - Topik lain mengikuti kerangka yang sama: *About* = paragraf + fakta singkat; *Projects* = daftar
   kartu proyek; *Journey* = timeline. Penomoran urutan **hanya** dipakai di Journey, karena isinya
   memang berurutan.
@@ -462,6 +497,12 @@ disabled (bila relevan). Fokus = ring `2px solid --color-accent-text`, offset 2p
   latar tidak meloncat. `.wash--detail` ikut dicerminkan. Di compact karakter selalu di tengah, tapi
   tetap berjalan keluar-masuk. Home ↔ topik di sisi kanan: karakter berjalan ke posisinya sambil
   kamera zoom.
+- **Narasi otomatis hanya sekali per topik:** kunjungan pertama ke sebuah topik memutar narasinya
+  sendiri (gestur pembuka + suara). Kunjungan berikutnya, termasuk setelah reload, tidak: avatar
+  hanya tersenyum dan pengunjung menekan play sendiri. Diingat per perangkat (`localStorage`
+  `heard`, `main.js`). Topik baru dianggap "sudah didengar" setelah narasi benar-benar mulai, atau
+  saat pengunjung menekan play. Autoplay yang diblokir browser tidak dihitung. Ganti bahasa saat
+  narasi sedang diputar tetap melanjutkan narasi dalam bahasa baru.
 - **Gestur saat bicara (acak):** selama narasi diputar, gestur *present* (telapak terbuka) berulang
   pada waktu acak: tahan 1.2–2.8 s, lalu jeda 1.4–4.2 s setelah gestur selesai. Tangan kiri atau kanan
   dipilih acak, 65% berganti tangan dari sebelumnya. Mengangguk hanya kadang-kadang (40%), kecuali pada
@@ -555,7 +596,7 @@ Disiplin pemakaiannya:
 
 | File | Isi |
 |---|---|
-| `web/index.html` | struktur semantik: `header>nav`, `main` (view home + view detail), loader; font Google |
+| `web/index.html` | struktur semantik: `header>nav`, `main` (view home + view detail), loader; preload model, animasi, dan set studio |
 | `web/src/style.css` | token §3, kaca 3 tingkat + fallback, layout `wide` dan `compact` |
 | `web/src/content.js` | **satu-satunya tempat copy**: `profile` + `topics[]` (judul, heading, lead, isi, transkrip) |
 | `web/src/ui.js` | membangun DOM dari `content.js` (nav, kartu, menu topik, isi topik, transkrip, player) |
@@ -564,7 +605,10 @@ Disiplin pemakaiannya:
 | `web/src/icons.js` | ikon Lucide inline + wordmark GIFΛR |
 | `web/src/main.js` | hash router `#/` ↔ `#/<topik>`, transisi kamera, gestur + narasi, scroll antar topik (wide), menu mobile |
 | `web/src/camera.js` | shot full/half; posisi dari `stage.js`; potongan half body di ikat pinggang |
-| `web/public/images/` | `background-avatar.png`, `logos/*.svg` (Simple Icons, warna brand) |
+| `web/public/images/` | `background-avatar.webp` (fallback 2D; `.png` = sumber), `logos/*.svg` (Simple Icons, warna brand) |
+| `web/public/sets/` | set 3D hasil bake: `<set>/set.glb` + `lm_big.webp` + `lm_detail.webp` (lihat §16) |
+| `web/src/sets.js` | `loadSet()` + `SetStage` (canvas WebGL kedua untuk set) |
+| `web/scripts/optimize_vrm.py` | `vroid/avatar_v1.vrm` → `web/public/models/avatar_v1.vrm` (lossless, lihat §15) |
 
 **Perilaku yang dipilih untuk keputusan terbuka (§11), bisa diubah:**
 - **Pill sapaan:** klik → karakter melambai.
@@ -601,3 +645,41 @@ Disiplin pemakaiannya:
 - Paragraf intro + tanda tangan pindah ke topik **Who am I?** (`signature: true` di `content.js`).
 - Wash home menjadi vignette kiri-kanan agar kartu dekoratif di `background-avatar.png` tidak terbaca sebagai kartu asli.
 - Mobile: tanpa judul besar; karakter lebih besar, name plate di atas grid kartu.
+
+---
+
+## 15. Performa (2026-10-17, dipasang ulang di atas versi copy-writer 2026-10-18)
+
+Semua fitur tetap; yang berubah hanya cara aset dimuat dan kerja per frame.
+
+- **Model VRM 10,9 MB → 4,6 MB, lossless** (`scripts/optimize_vrm.py`): shape key wajah VRoid ditulis ulang
+  sebagai *sparse accessor*, thumbnail meta dikecilkan. Geometri/morph identik bit per bit.
+- **Latar 2D PNG 1,47 MB → WebP 41 KB** (fallback sampai set 3D termuat).
+- **Font self-hosted, subset Latin saja** (CSS Google Fonts 578 KB yang memblokir render diganti ±6 woff2 ±20 KB).
+- **Preload** model, animasi, dan set studio dari HTML; FBX di-parse sambil model masih diunduh.
+- **Klik karakter** membaca alpha piksel kanvas avatar (±3 px), bukan raycast mesh skinned (macet 300–400 ms).
+- **Batas frame** di ticker GSAP memakai timestamp vsync (`document.timeline.currentTime`): layar > 100 Hz
+  merender tiap refresh kedua. **Resolusi adaptif**: DPR turun 0,25 (min 1×) bila frame rata-rata > 28 ms selama 3 detik.
+- **Player:** elemen di-cache, ring/waktu hanya ditulis saat berubah.
+
+## 16. Set 3D (2026-10-18)
+
+Latar 3D sungguhan, dibuat di `blender/bg_sets_v001.blend` (scene `SET_Home`, `SET_Skills`; builder di text block `bg_lib.py`).
+
+- **Pemetaan** (`SET_OF` di `main.js`): Home & About → studio (`home`); Skills → ruang kerja (`skills`);
+  Certificates (`projects`) → galeri pencapaian (`certs`: emblem segel di belakang kepala, bingkai sertifikat, piala);
+  Journey → lengkung pintu ke teras fajar (`journey`: jalan batu pijakan + lampu milestone menuju bukit, rak timeline naik).
+- **Lapisan:** `#set` (canvas WebGL kedua, opak) di atas gambar 2D dan **di bawah** wash + canvas avatar, jadi semua
+  lapisan lain tetap. Set statis → canvas hanya digambar ulang saat kamera/ukuran/set berubah.
+- **Cara bake:** warna = vertex color; cahaya = lightmap Cycles (DIFFUSE direct+indirect) disimpan irradiance/2,5
+  sRGB WebP; bagian bercahaya (langit, layar, ring) tanpa lightmap. Di web `MeshBasicMaterial`
+  (`lightMapIntensity = π·2,5`), 3 draw call per set, tanpa lampu. GLB tanpa material, weld + meshopt (gltf-transform).
+- **Ukuran:** ±0,3–0,45 MB per set. Set lain dimuat satu per satu saat halaman idle.
+- **Transisi:** crossfade 3D 0,9 s (set lama dirender ke tekstur dan memudar di atas set baru, keduanya ikut kamera);
+  set lama tetap tampil sampai set baru siap di GPU. Dimulai saat kamera zoom (Home ↔ topik) atau saat karakter
+  berjalan keluar layar (topik ↔ topik). Set sama = tanpa transisi. Wash detail datang/pergi bersama panel (motion.js).
+- **Keterbacaan:** dengan set, wash detail menjadi kolom lembut di belakang teks (bukan seluruh sisi), wash home 55%;
+  wide detail: blur 1,5 px pada `#set` (depth of field).
+- **Preview tanpa UI:** `sets-preview.html?set=home|skills&shot=full|half&side=left|right`.
+- **Mengubah set:** edit di Blender → bake (`bake_copy` → `lightmap_uv` → `bake_lightmap`) → `make_export` → export GLB
+  per scene (`use_active_scene=True`) → `gltf-transform weld` + `meshopt` → lightmap WebP (q97 besar, q92 detail).

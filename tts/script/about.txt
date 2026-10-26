@@ -1,0 +1,8 @@
+Hi, I’m Giffar.
+I started out in computer and network engineering.
+And now, I build interfaces as a frontend developer at Dattabot.
+I’m based in Bekasi, working mostly with React and TypeScript,
+while also studying at Universitas BSI,
+learning on the job and in class.
+One step at a time.
+Welcome to my space.

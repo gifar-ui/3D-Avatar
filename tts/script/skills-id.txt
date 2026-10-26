@@ -1,0 +1,9 @@
+Nah, ini dia, stack harianku.
+Semuanya aku pelajari sambil kerja dan juga di kelas.
+Intinya, React dan TypeScript.
+Terus buat sisi server, aku pakai Node.js dan Express.
+Di bagian frontend, ada React, TypeScript, Tailwind CSS, dan Vite.
+Untuk backend dan database, aku pakai Node.js, Express, Postgres, sama MySQL.
+Terus buat tools lainnya, ada Git, Docker, Linux, IDE kesayangan,
+dan tentu saja, AI agent yang bantu kerjaanku jadi lebih cepat.
+Itu dia, teman-teman setiaku tiap hari.

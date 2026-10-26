@@ -1,3 +1,7 @@
+// M PLUS Rounded only for the subtitles (bold); running text is the system font (style.css --font-sans)
+import '@fontsource/m-plus-rounded-1c/latin-700.css';
+import '@fontsource/mochiy-pop-one/latin-400.css';
+import '@fontsource/mrs-saint-delafield/latin-400.css';
 import './style.css';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
@@ -5,25 +9,43 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { AvatarRig } from './avatar.js';
 import { CameraDirector } from './camera.js';
-import { loadMixamoClip } from './mixamo.js';
+import { loadMixamo, retargetMixamoClip } from './mixamo.js';
 import { maskArmpitOutlines } from './outlineFix.js';
-import { profile, topics, topicById } from './content.js';
+import { addTieSpring } from './tie.js';
+import { LANGS, contentFor } from './content.js';
 import { Narration } from './narration.js';
+import { SetStage } from './sets.js';
 import { Backdrop, applyLayout, measureLayout, shotLayout, sideOffset } from './stage.js';
-import { cardParallax, detailIn, detailOut, frameIn, homeIn, homeOut, nudgeScroll, panelsIn, panelsOut, placeMarkers, play, setView } from './motion.js';
-import { renderChrome, renderNarration, renderSound, renderTopic, setActiveTopic, setSubtitles } from './ui.js';
+import { initHover } from './hover.js';
+import { cardParallax, detailIn, detailOut, fanCerts, frameIn, homeIn, homeOut, nudgeScroll, panelsIn, panelsOut, placeMarkers, play, setView } from './motion.js';
+import { fitTopic, renderChrome, renderLanguage, renderNarration, renderSound, renderTopic, setActiveTopic, setSubtitles } from './ui.js';
 
-const MODEL_URL = '/models/avatar_v1.vrm';
+// v2 = v1 with the outfit made clearer (web/scripts/outfit_vrm.py); v1 stays as the checkpoint
+const MODEL_URL = '/models/avatar_v2.vrm';
+const CLIP_URLS = { walk: '/animations/walk.json', idle: '/animations/idle.json' };
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (id) => document.getElementById(id);
 
 // ---------- renderer / scene ----------
 const canvas = $('stage');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// Render resolution starts at the screen's (capped at 2x) and steps down if frames run long.
+const MAX_DPR = Math.min(window.devicePixelRatio, 2);
+let dpr = MAX_DPR;
+renderer.setPixelRatio(dpr);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 50);
+
+// The 3D set behind the avatar, on its own canvas under the washes: home and About in the
+// studio, Skills in the workspace, Certificates in the gallery, Journey at the open arch.
+// Until a set loads (or if it can't), the 2D backdrop image shows instead.
+const setCanvas = $('set');
+const stageSet = new SetStage(setCanvas, camera);
+const SET_OF = { skills: 'skills', projects: 'certs', journey: 'journey' };
+const setOf = (id) => (id && SET_OF[id]) || 'home';
+let wantedSet = null;
+let setToken = 0;
 
 const key = new THREE.DirectionalLight(0xffffff, Math.PI);
 key.position.set(1.0, 1.6, 2.0);
@@ -51,7 +73,15 @@ function makeGroundShadow() {
 }
 
 // ---------- page ----------
-renderChrome({ profile, topics });
+// English by default; a visitor's pick is remembered on this device
+let lang = 'en';
+try {
+  const saved = localStorage.getItem('lang');
+  if (LANGS.includes(saved)) lang = saved;
+} catch { /* storage unavailable: English */ }
+let content = contentFor(lang);
+renderChrome(content);
+setProgress(0);                               // the loader in the visitor's language
 const backdrop = new Backdrop([...document.querySelectorAll('.backdrop__img')], camera);
 const viewHome = $('view-home');
 const viewDetail = $('view-detail');
@@ -63,22 +93,27 @@ renderSound(muted);
 
 const narration = new Narration({ onChange: renderNarration });
 const parallax = cardParallax([...document.querySelectorAll('.topic-card')]);
+initHover();                                   // pointer hover motion on the chrome and the cards
 
 // ---------- avatar ----------
 let rig = null;
 let director = null;
 let avatarRoot = null;
 let headNode = null;
+let tie = null;               // { update(seconds), hold() }: the tie's aim and its limits (tie.js)
 
 const loader = new GLTFLoader();
 loader.register((parser) => new VRMLoaderPlugin(parser));
 
-function setProgress(pct, label = 'Memuat avatar…') {
+function setProgress(pct, label = content.ui.loadingAvatar) {
   $('loader-fill').style.transform = `scaleX(${pct / 100})`;
   $('loader-text').textContent = `${label} ${pct}%`;
 }
 
 async function init() {
+  // the animations and the first set download and parse while the model is still coming in
+  const clips = Object.fromEntries(Object.entries(CLIP_URLS).map(([name, url]) => [name, loadMixamo(url)]));
+  const firstSet = changeSet(setOf(route()), { instant: true });
   const gltf = await loader.loadAsync(MODEL_URL, (e) => {
     if (e.total) setProgress(Math.round((e.loaded / e.total) * 90));
   });
@@ -88,6 +123,7 @@ async function init() {
   VRMUtils.rotateVRM0(vrm);                 // no-op for VRM 1.0, keeps VRM 0.x facing the camera
   vrm.scene.traverse((o) => (o.frustumCulled = false));
   maskArmpitOutlines(vrm);                  // no dark outline showing through the shirt at the armpits
+  tie = addTieSpring(vrm);                  // the tie swings (spring bones), on the rest pose
   scene.add(vrm.scene);
   if (vrm.lookAt) vrm.lookAt.target = camera;   // eyes follow the viewer
 
@@ -96,11 +132,9 @@ async function init() {
   const hipsHeight = vrm.humanoid.getNormalizedBoneNode('hips').getWorldPosition(new THREE.Vector3()).y;
   director = new CameraDirector(camera, vrm, (name) => shotLayout(layout, name, director.shots, director.topY));
 
-  setProgress(92, 'Memuat animasi…');
-  const [walk, idle] = await Promise.all([
-    loadMixamoClip('/animations/walk.fbx', vrm, hipsHeight, 'walk'),
-    loadMixamoClip('/animations/idle.fbx', vrm, hipsHeight, 'idle'),
-  ]);
+  setProgress(92, content.ui.loadingAnimations);
+  const [walk, idle] = await Promise.all(['walk', 'idle'].map(async (name) => retargetMixamoClip(await clips[name], vrm, hipsHeight, name)));
+  await firstSet;                           // a set that fails to load leaves the 2D backdrop up
 
   rig = new AvatarRig(vrm, { walk, idle });
   avatarRoot = vrm.scene;
@@ -126,6 +160,7 @@ async function init() {
     rig.nod(0.07);
   }
   state.ready = true;
+  (window.requestIdleCallback ?? setTimeout)(preloadSets);
   if (!route()) {
     markActive(null);
     const reveal = homeIn(viewHome, avatarCentre, { footer: !startedHome, intro: !skipped });
@@ -138,6 +173,27 @@ async function init() {
 let skipIntro;
 const introSkipped = new Promise((resolve) => (skipIntro = resolve));
 
+// Puts a set on stage. Sets crossfade in 3D (sets.js): the current set stays up until the next
+// one is loaded and on the GPU, then fades into it while the camera zooms or the avatar is off
+// stage. The other sets load one after another once the page is idle.
+const SET_FADE = reduceMotion ? 0.3 : 0.9;   // s
+async function changeSet(name, { instant = false } = {}) {
+  if (name === wantedSet) return;
+  wantedSet = name;
+  const token = ++setToken;
+  try {
+    await stageSet.load(name);
+    if (token !== setToken) return;
+    await stageSet.show(name, instant || !stageSet.shown ? 0 : SET_FADE);
+    document.body.classList.add('has-set');
+  } catch (err) {
+    console.warn(`3D set "${name}" unavailable, keeping the current backdrop.`, err);
+    if (token === setToken) wantedSet = stageSet.shown;
+  }
+}
+// one at a time, so they never compete with each other (or the narration audio) for bandwidth
+const preloadSets = () => Object.values(SET_OF).reduce((prev, name) => prev.then(() => stageSet.load(name)).catch(() => {}), Promise.resolve());
+
 // The avatar's chest on screen in the full-body shot: the cards come out of (and go back into) it.
 function avatarCentre() {
   const l = shotLayout(layout, 'full', director.shots, director.topY);
@@ -146,12 +202,12 @@ function avatarCentre() {
 
 init().catch((err) => {
   console.error(err);
-  $('loader-text').textContent = 'Gagal memuat avatar. Muat ulang halaman.';
+  $('loader-text').textContent = content.ui.loadFailed;
 });
 
 // ---------- navigation: #/ = home, #/<topic> = detail ----------
 const state = { ready: false, busy: false, switching: false, view: 'home', topic: null, side: 'left' };
-const order = [null, ...topics.map((t) => t.id)];
+const order = [null, ...content.topics.map((t) => t.id)];
 let playTimer = 0;
 let navToken = 0;
 const SWITCH_SPEED = 1.45;          // m/s: a brisker walk between topics than the intro stroll
@@ -162,11 +218,11 @@ let opening = null;                 // { zoom, abort } from the start of a zoom-
 
 function route() {
   const id = location.hash.replace(/^#\/?/, '');
-  return topicById[id] ? id : null;
+  return content.topicById[id] ? id : null;
 }
 
 // Topics alternate sides: About and Projects keep the avatar left, Skills and Journey mirror it right.
-const sideOf = (id) => (topics.findIndex((t) => t.id === id) % 2 ? 'right' : 'left');
+const sideOf = (id) => (content.topics.findIndex((t) => t.id === id) % 2 ? 'right' : 'left');
 function setSide(side) {
   state.side = side;
   document.documentElement.dataset.side = side;
@@ -210,9 +266,10 @@ async function openDetail(id) {
   document.body.dataset.view = 'detail';
   // after the view switch: on compact screens the trail only now appears, so measure it now and place it
   markActive(id, { instant: layout.mode === 'compact' });
-  renderTopic(topicById[id], profile);
+  renderTopic(content.topicById[id], content.profile);
   resetScroll();
-  const ready = narration.load(topicById[id]);
+  const ready = narration.load(content.topicById[id]);
+  changeSet(setOf(id));                  // a different set swaps in during the zoom
   // zoom in while the cards lift away; on a mirrored topic the avatar walks over to its spot meanwhile
   const walk = reduceMotion ? rig.place(restX()) : rig.walkTo(restX());
   const zoom = gsap.timeline()
@@ -251,6 +308,7 @@ async function switchTopic(id, token) {
   markActive(id);
   narration.pause();
   clearTimeout(playTimer);
+  changeSet(setOf(id));                  // swaps while the avatar is off stage
   try {
     const clear = play(panelsOut(viewDetail));
     if (!reduceMotion) {
@@ -262,9 +320,9 @@ async function switchTopic(id, token) {
     }
     // the stage is empty: swap side and content
     setSide(sideOf(id));
-    renderTopic(topicById[id], profile);
+    renderTopic(content.topicById[id], content.profile);
     resetScroll();
-    const ready = narration.load(topicById[id]);
+    const ready = narration.load(content.topicById[id]);
     if (!reduceMotion) {
       const rest = restX();
       const enterDir = nearestEdge(rest) || -exitDir;
@@ -291,6 +349,7 @@ async function closeDetail() {
   state.topic = null;
   markActive(null);
   document.body.dataset.view = 'home';
+  changeSet('home');
   // the panels clear, the camera pulls back, and the cards rise in as it settles;
   // a mirrored avatar walks back to centre stage on the way
   const walk = reduceMotion ? rig.place(0) : rig.walkTo(0);
@@ -315,19 +374,38 @@ async function reverseOpen() {
   markActive(null);
   document.body.dataset.view = 'home';
   setView(viewHome, true);
+  changeSet('home');
   const walk = reduceMotion ? rig.place(0) : rig.walkTo(0);
   await Promise.all([zoom.reverse(), walk]);
   setSide('left');
 }
 
-// gesture first (random hand), then the narration a beat later; more gestures follow at random while it plays
-function startNarration(id, ready) {
+// A topic's narration starts on its own only the first time the visitor opens it (remembered on this
+// device, so a reload doesn't replay it); after that the avatar just greets them with a smile and the
+// play button is theirs. It counts as heard once it has actually started, so a blocked autoplay
+// (the page opened straight onto a topic, before any click) still plays on the next visit.
+const heard = new Set();
+try {
+  for (const id of JSON.parse(localStorage.getItem('heard') ?? '[]')) heard.add(id);
+} catch { /* storage unavailable: every topic plays once per visit */ }
+function markHeard(id) {
+  heard.add(id);
+  try { localStorage.setItem('heard', JSON.stringify([...heard])); } catch { /* not remembered */ }
+}
+
+// gesture first (random hand), then the narration a beat later; more gestures follow at random while
+// it plays. `replay`: start it whatever was heard before (the language switch, mid-narration)
+function startNarration(id, ready, { replay = false } = {}) {
   clearTimeout(playTimer);
   rig.setTalking(false);                     // settle the previous topic's state now, so it can't cut the new gesture
+  if (!replay && heard.has(id)) {
+    rig.smile(0.6, 1.8);
+    return;
+  }
   rig.present();
   playTimer = setTimeout(async () => {
     await ready;
-    if (state.topic === id && state.view === 'detail') narration.play();
+    if (state.topic === id && state.view === 'detail' && await narration.play()) markHeard(id);
   }, reduceMotion ? 0 : 600);
 }
 
@@ -340,7 +418,32 @@ const CLOSED = { aa: 0, ih: 0, ou: 0, ee: 0, oh: 0 };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------- controls ----------
-$('btn-play').addEventListener('click', () => narration.toggle());
+$('btn-play').addEventListener('click', () => {
+  narration.toggle();
+  if (narration.playing && state.topic) markHeard(state.topic);   // played by hand: no autoplay next time
+});
+
+// Language: swaps the copy in place; an open topic re-renders and its narration reloads in the new
+// voice, playing on from the start if it was playing.
+$('lang-switch').addEventListener('click', (e) => {
+  const next = e.target.closest('[data-lang]')?.dataset.lang;
+  if (!next || next === lang) return;
+  lang = next;
+  content = contentFor(lang);
+  try { localStorage.setItem('lang', lang); } catch { /* not remembered */ }
+  renderLanguage(content);
+  renderSound(muted);
+  renderNarration(narration);
+  placeMarkers({ instant: true });            // the nav links changed width
+  const id = state.topic;
+  if (state.view === 'detail' && id) {
+    const wasPlaying = narration.playing;
+    renderTopic(content.topicById[id], content.profile);
+    fanCerts(document.querySelector('.certs__deck'));   // a rebuilt deck on a page already showing
+    const ready = narration.load(content.topicById[id]);
+    if (wasPlaying) startNarration(id, ready, { replay: true });
+  }
+});
 
 const ccBtn = $('player-cc');
 ccBtn.addEventListener('click', () => setSubtitles(ccBtn.getAttribute('aria-pressed') !== 'true'));
@@ -351,16 +454,6 @@ $('btn-sound').addEventListener('click', () => {
   renderSound(muted);
 });
 
-const greetBtn = $('btn-greet');
-greetBtn.addEventListener('click', () => rig?.wave());
-// greet is unavailable while the avatar is walking in or mid-gesture
-let greetBusy = null;
-function syncGreet() {
-  const busy = !rig || rig.busy;
-  if (busy === greetBusy) return;
-  greetBusy = busy;
-  greetBtn.setAttribute('aria-disabled', String(busy));
-}
 
 // mobile menu
 const menuBtn = $('btn-menu');
@@ -400,7 +493,7 @@ window.addEventListener('wheel', (e) => {
 // ---------- pointer: head follows the cursor, click/tap the avatar to wave ----------
 const ndc = new THREE.Vector2();
 const headScreen = new THREE.Vector3();
-const raycaster = new THREE.Raycaster();
+let pick = null;             // a click waiting for the next frame's hit test
 
 function toNdc(e) {
   ndc.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
@@ -451,11 +544,28 @@ document.documentElement.addEventListener('pointerleave', () => {
 });
 
 canvas.addEventListener('click', (e) => {
-  if (!rig || !avatarRoot || state.busy || rig.busy) return;
-  toNdc(e);
-  raycaster.setFromCamera(ndc, camera);
-  if (raycaster.intersectObject(avatarRoot, true).length) rig.wave();
+  if (!rig || state.busy || rig.busy) return;
+  pick = { x: e.clientX, y: e.clientY };
 });
+
+// Was the avatar drawn under the click? The avatar is the only opaque thing on its transparent
+// canvas (the ground shadow stays under 30% alpha; the set has a canvas of its own), so this
+// reads the pixels just rendered around the click instead of ray-casting the skinned, morphing
+// mesh (which stalls ~0.3 s).
+const PICK_RADIUS = 3;       // CSS px of slack around the click, for fingertips
+const pickPixels = new Uint8Array(4 * (2 * PICK_RADIUS + 1) ** 2);
+function avatarAt({ x, y }) {
+  const gl = renderer.getContext();
+  const scale = canvas.width / canvas.clientWidth;
+  const r = Math.max(1, Math.round(PICK_RADIUS * scale));
+  const size = 2 * r + 1;
+  const px = Math.round(x * scale) - r;
+  const py = canvas.height - Math.round(y * scale) - r - 1;
+  const buf = size * size * 4 <= pickPixels.length ? pickPixels : new Uint8Array(size * size * 4);
+  gl.readPixels(px, py, size, size, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+  for (let i = 3; i < size * size * 4; i += 4) if (buf[i] > 160) return true;
+  return false;
+}
 
 function clamp1(v) {
   return Math.max(-1, Math.min(1, v));
@@ -467,29 +577,73 @@ function resize() {
   const h = window.innerHeight;
   layout = measureLayout(w, h);
   applyLayout(layout);
+  renderer.setPixelRatio(dpr);
   renderer.setSize(w, h, false);
+  stageSet.setSize(w, h, dpr);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   director?.snap();
   placeMarkers({ instant: true });
+  fitTopic();
   // a resize changes where the mirrored spot is; settle there unless mid-walk
   if (rig && state.view === 'detail' && !state.busy && !rig.walking) rig.root.position.x = restX();
 }
 window.addEventListener('resize', resize);
 resize();
-document.fonts?.ready.then(() => placeMarkers({ instant: true }));   // link widths change once the fonts load
+document.fonts?.ready.then(() => {
+  placeMarkers({ instant: true });            // link widths change once the fonts load
+  fitTopic();                                 // and the topic panel's height
+});
+
+// Frame budget. High-refresh screens draw every other refresh (120 Hz → 60 fps, 144 Hz → 72 fps;
+// 60–100 Hz unaffected): the avatar's motion looks the same and the GPU does half the work.
+// If frames keep taking longer than ~22 ms (under ~45 fps) after the intro, the render resolution
+// steps down (to no less than 1x), so weak GPUs, retina laptops and very large screens stay smooth;
+// a device that keeps up keeps its full resolution.
+const MIN_FRAME_MS = 9;
+const SLOW = { frameMs: 22, windowMs: 3000, step: 0.25 };
+const pace = { last: 0, start: 0, frames: 0 };
+function adaptResolution(now) {
+  // not measuring yet, or a stall (tab switch, GC): start a fresh window
+  if (!state.ready || document.hidden || dpr <= 1 || now - pace.last > 250) {
+    pace.start = now;
+    pace.frames = 0;
+    return;
+  }
+  pace.frames++;
+  if (now - pace.start < SLOW.windowMs) return;
+  if ((now - pace.start) / pace.frames > SLOW.frameMs) {
+    dpr = Math.max(1, dpr - SLOW.step);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    stageSet.setSize(window.innerWidth, window.innerHeight, dpr);
+  }
+  pace.start = now;
+  pace.frames = 0;
+}
 
 // One loop for everything: GSAP's ticker updates its tweens (camera, UI) first, then this
 // renders the frame, so a camera move is never a frame behind the avatar.
-gsap.ticker.add((time, deltaMs) => {
-  const dt = Math.min(deltaMs / 1000, 1 / 20);
+gsap.ticker.add((time) => {
+  // the frame's vsync-aligned timestamp: GSAP's clock jitters enough to skip frames on 100 Hz screens
+  const now = document.timeline?.currentTime ?? time * 1000;
+  if (now - pace.last < MIN_FRAME_MS) return;
+  adaptResolution(now);
+  const dt = Math.min((now - pace.last) / 1000, 1 / 20);
+  pace.last = now;
   const mouth = narration.update(dt);
   rig?.setMouth(narration.playing ? mouth ?? CLOSED : null);
   rig?.setTalking(narration.playing);        // random hand gestures while the narration plays
   if (narration.playing) renderNarration(narration);
+  tie?.update(now / 1000);
   rig?.update(dt);
-  syncGreet();
-  if (director) backdrop.update(director.topY, layout.vw, layout.vh, layout.mode === 'wide');
+  tie?.hold();                               // the tie stays on the shirt, within its swing
+  if (director && !stageSet.shown) backdrop.update(director.topY, layout.vw, layout.vh, layout.mode === 'wide');
   if (avatarRoot) groundShadow.position.x = avatarRoot.position.x;
+  stageSet.render();                         // only draws when the camera moved
   renderer.render(scene, camera);
+  if (pick) {
+    if (avatarAt(pick) && !state.busy) rig?.wave();
+    pick = null;
+  }
 });

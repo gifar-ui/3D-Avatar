@@ -83,18 +83,22 @@ export class Narration {
     return this.lip ? this.audio.ended : this.duration > 0 && this.simTime >= this.duration;
   }
 
+  // Resolves true once it is playing, false if it couldn't start (nothing loaded, autoplay blocked).
   play() {
-    if (!this.duration) return;
+    if (!this.duration) return Promise.resolve(false);
     if (this.time >= this.duration - 0.05) this.seek(0);
     this.playing = true;
+    let started = Promise.resolve(true);
     if (this.lip) {
       this.audio.muted = this.muted;
-      this.audio.play().catch(() => {            // autoplay blocked before any interaction
+      started = this.audio.play().then(() => true, () => {   // autoplay blocked before any interaction
         this.playing = false;
         this.onChange(this);
+        return false;
       });
     }
     this.onChange(this);
+    return started;
   }
   pause() {
     this.playing = false;
@@ -115,9 +119,11 @@ export class Narration {
     this.audio.muted = m;
   }
 
+  // The sentence being spoken: the latest one that has started, so where a recording runs one
+  // sentence straight into the next, the next takes over at once instead of after the gap.
   get current() {
     const t = this.time;
-    return this.sentences.findIndex((s) => t >= s.start && t < s.end + SENTENCE_GAP);
+    return this.sentences.findLastIndex((s) => t >= s.start && t < s.end + SENTENCE_GAP);
   }
 
   // Number of words whose start has been reached (so words[0..n-1] are spoken or being spoken).

@@ -13,6 +13,24 @@
       "skillPath": "skills/animation-performance/SKILL.md",
       "computedHash": "01effa412b72097494cd89613ce15c166e9dae04e2a578eb015a45f4a89b7e29"
     },
+    "cinematic-scroll-storytelling": {
+      "source": "mengto/skills",
+      "sourceType": "github",
+      "skillPath": "agent-skills/web-design/cinematic-scroll-storytelling/SKILL.md",
+      "computedHash": "d05b2a9b0e1bd0ac139126aa90122947b8c1fa8665fb7faf9fb19349f741f353"
+    },
+    "copy-editing": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "skillPath": "skills/copy-editing/SKILL.md",
+      "computedHash": "43a0ead845fa5dde5cb6dc0a8e8578f503a2b917035e2267fd32da1123101fcb"
+    },
+    "copywriting": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "skillPath": "skills/copywriting/SKILL.md",
+      "computedHash": "b7ad458352da7e0f962bb285fdfb15daabbd2b354fc903548bf68ca7d973a8f3"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",

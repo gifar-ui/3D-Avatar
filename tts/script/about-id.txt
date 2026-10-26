@@ -1,0 +1,8 @@
+Halo, aku Giffar.
+Aku memulai perjalanan dari teknik komputer dan jaringan.
+Dan sekarang, aku membangun tampilan antarmuka sebagai frontend developer di Dattabot.
+Aku tinggal di Bekasi, sehari-hari aku banyak bekerja dengan React dan TypeScript.
+Sambil tetap kuliah di Universitas BSI,
+belajar sambil bekerja dan juga di kelas.
+Selangkah demi selangkah.
+Selamat datang di ruang kecilku.

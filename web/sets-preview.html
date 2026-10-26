@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D sets · preview</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #F2F4F9; font: 12px system-ui, sans-serif; }
+      #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+      #status { position: fixed; left: 12px; bottom: 10px; color: #5F6E8C; background: rgba(255, 255, 255, 0.7); padding: 4px 8px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+    <p id="status">Loading…</p>
+    <script type="module" src="/src/sets-preview.js"></script>
+  </body>
+</html>

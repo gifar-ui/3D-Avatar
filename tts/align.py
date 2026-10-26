@@ -172,13 +172,16 @@ def main():
     p.add_argument("--script", type=Path, required=True, help="one sentence per line, spelled correctly")
     p.add_argument("--out", type=Path, required=True, help="output path without extension")
     p.add_argument("--model", default="small")
+    p.add_argument("--lang", default="id", help="spoken language for the word timestamps (id, en, ...)")
     args = p.parse_args()
 
     lines = [l.strip() for l in args.script.read_text(encoding="utf-8").splitlines() if l.strip()]
     model = WhisperModel(args.model, device="cpu", compute_type="int8")
-    segs, _ = model.transcribe(str(args.audio), language="id", word_timestamps=True,
-                               vad_filter=True, initial_prompt=" ".join(lines))
-    asr = [{"text": w.word.strip(), "s": w.start, "e": w.end} for s in segs for w in s.words if w.word.strip()]
+
+    def transcribe(prompt):
+        segs, _ = model.transcribe(str(args.audio), language=args.lang, word_timestamps=True,
+                                   vad_filter=True, initial_prompt=prompt)
+        return [{"text": w.word.strip(), "s": w.start, "e": w.end} for s in segs for w in s.words if w.word.strip()]
 
     tokens, owner = [], []
     for li, line in enumerate(lines):
@@ -187,6 +190,11 @@ def main():
                 if part:
                     tokens.append(part)
                     owner.append(li)
+    # the script as a prompt helps with names, but whisper sometimes takes it as already
+    # said and skips most of the audio (certs-tts.mp3: 14 of 75 words); then go without it
+    asr = transcribe(" ".join(lines))
+    if len(asr) < 0.6 * len(tokens):
+        asr = transcribe(None)
     spans = align_script(tokens, asr)
 
     words, cues = [], []
